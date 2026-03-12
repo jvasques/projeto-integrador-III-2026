@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="my-4">Movimentações</h1>
+<div class="mb-3 d-flex gap-2 mov">
+    <button class="btn btn-primary" onclick="openModal('movimentacao-modal')">Nova Movimentação</button>    
+    <button class="btn btn-danger" onclick="openModal('reversao-modal')">Devolução</button>
+    <button class="btn btn-secondary" onclick="openModal('transfer-modal')">Transferir Estoque</button>
+    <button class="btn btn-outline-secondary" onclick="openModal('relatorios-modal')">Relatórios</button>
+</div>
+
+<form method="GET" action="/movimentacoes" class="mb-3 row g-2 align-items-end">
+    <div class="col-12 col-sm-auto d-flex align-items-center gap-2">
+        <label class="me-2 mb-0">Mostrar:</label>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="filter_tipo" id="f_both" value="both" {% if filter_tipo=='both' or not filter_tipo %}checked{% endif %} onchange="this.form.submit()">
+            <label class="form-check-label" for="f_both">Ambas</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="filter_tipo" id="f_entrada" value="entrada" {% if filter_tipo=='entrada' %}checked{% endif %} onchange="this.form.submit()">
+            <label class="form-check-label" for="f_entrada">Entrada</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="filter_tipo" id="f_saida" value="saida" {% if filter_tipo=='saida' %}checked{% endif %} onchange="this.form.submit()">
+            <label class="form-check-label" for="f_saida">Saída</label>
+        </div>
+    </div>
+    <div class="col-12 col-sm-2">
+        <label class="form-label mb-0">De</label>
+        <input type="date" name="date_from" class="form-control" value="{{ filter_date_from or '' }}">
+    </div>
+    <div class="col-12 col-sm-2">
+        <label class="form-label mb-0">Até</label>
+        <input type="date" name="date_to" class="form-control" value="{{ filter_date_to or '' }}">
+    </div>
+    <div class="col-12 col-sm-auto">
+        <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+    </div>
+</form>
+
+<div id="transfer-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('transfer-modal')">&times;</span>
+        <h2>Transferir Estoque</h2>
+        <form method="POST" action="/movimentacoes/transfer" class="row g-2">
+            <div class="col-12">
+                <label>Produto</label>
+                <select name="produto_id" id="transfer-produto" class="form-control" required>
+                    {% for p in produtos_list %}
+                    <option value="{{ p.sample_id }}">{{ p.descricao }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6">
+                <label>Local origem</label>
+                <select name="local_from" id="transfer-local-from" class="form-control" required>
+                    {% for l in locais %}
+                    <option value="{{ l.nome }}">{{ l.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6">
+                <label>Local destino</label>
+                <select name="local_to" id="transfer-local-to" class="form-control" required>
+                    {% for l in locais %}
+                    <option value="{{ l.nome }}">{{ l.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12"><label>Quantidade</label><input type="number" name="quantidade" class="form-control"
+                    min="1" required></div>
+            <div class="col-12"><button class="btn btn-primary">Transferir</button></div>
+        </form>
+    </div>
+</div>
+
+<div id="relatorios-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('relatorios-modal')">&times;</span>
+        <h2>Relatórios - Movimentações</h2>
+        <form method="POST" action="/movimentacoes/relatorio" target="_blank" class="row g-2">
+            <div class="col-12">
+                <label>Tipo de relatório</label>
+                <select name="report_type" class="form-control">
+                    <option value="movimentos">Movimentações (detalhado)</option>
+                    <option value="entradas">Entradas (somente)</option>
+                    <option value="saidas">Saídas (somente)</option>
+                    <option value="por_produto">Por produto (agregado)</option>
+                    <option value="por_cliente">Por cliente (agregado)</option>
+                    <option value="por_fornecedor">Por fornecedor (agregado)</option>
+                    <option value="por_local">Por local (agregado)</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label mb-0">De</label>
+                <input type="date" name="date_from" class="form-control">
+            </div>
+            <div class="col-6">
+                <label class="form-label mb-0">Até</label>
+                <input type="date" name="date_to" class="form-control">
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" name="format" value="excel" class="btn btn-success">Gerar Excel</button>
+                <button type="submit" name="format" value="pdf" class="btn btn-primary">Gerar PDF</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('relatorios-modal')">Fechar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+    <!-- Reversão modal -->
+    <div id="reversao-modal" class="modal">
+        <div class="modal-content">
+                <span class="close" onclick="closeModal('reversao-modal')">×</span>
+                <h2>Devolução</h2>
+            <div class="row g-2">
+                <div class="col-12">
+                    <label>Tipo de parceiro</label>
+                    <select id="rev-parceiro-tipo" class="form-control">
+                        <option value="cliente">Cliente</option>
+                        <option value="fornecedor">Fornecedor</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label id="rev-parceiro-label">Parceiro</label>
+                    <select id="rev-parceiro-id" class="form-control">
+                        <option value="">-- selecione --</option>
+                        <optgroup label="Clientes">
+                            {% for c in clientes %}
+                            <option data-tipo="cliente" value="{{ c.id }}">{{ c.nome }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Fornecedores">
+                            {% for f in fornecedores %}
+                            <option data-tipo="fornecedor" value="{{ f.id }}">{{ f.nome_fantasia }}</option>
+                            {% endfor %}
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label>Movimentações</label>
+                    <select id="rev-movimentos" class="form-control">
+                        <option value="">-- selecione parceiro primeiro --</option>
+                    </select>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button class="btn btn-danger" id="rev-confirm">Confirmar Devolução</button>
+                    <button class="btn btn-secondary" onclick="closeModal('reversao-modal')">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-mobile-friendly">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tipo</th>
+                <th>Produto</th>
+                <th>Quantidade</th>
+                <th>Local</th>
+                <th>Fornecedor/Cliente</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in movimentacoes %}
+            <tr>
+                <td data-label="ID">{{ m.id }}</td>
+                <td data-label="Tipo">{{ m.tipo }}</td>
+                <td data-label="Produto">{{ m.produto_descricao }}</td>
+                <td data-label="Quantidade">{{ m.quantidade }}</td>
+                <td data-label="Local">{{ m.local }}</td>
+                <td data-label="Fornecedor/Cliente">{{ m.parceiro }}</td>
+                <td data-label="Data">{{ m.created_at }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="movimentacao-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('movimentacao-modal')">×</span>
+        <h2>Nova Movimentação</h2>
+        <form method="POST" class="row g-2">
+            <div class="col-12">
+                <label>Tipo</label>
+                <select name="tipo" id="mov-tipo" class="form-control" required onchange="toggleParceiroField()">
+                    <option value="entrada">Entrada</option>
+                    <option value="saida">Saída</option>
+                </select>
+            </div>
+            <div class="col-12"><label>Produto</label><select name="produto_id" class="form-control" required>
+                    {% for p in produtos_list %}
+                    <option value="{{ p.sample_id }}">{{ p.descricao }}</option>
+                    {% endfor %}
+                </select></div>
+            <div class="col-12"><label>Quantidade</label><input type="number" name="quantidade" class="form-control"
+                    required></div>
+            <div class="col-12"><label>Local</label><select name="local" class="form-control" required>
+                    {% for l in locais %}
+                    <option value="{{ l.nome }}">{{ l.nome }}</option>
+                    {% endfor %}
+                </select></div>
+            <div class="col-12" id="parceiro-field">
+                <label id="parceiro-label">Fornecedor</label>
+                <select name="parceiro_id" id="parceiro-select" class="form-control">
+                    <option value="">-- selecione --</option>
+                    {% for f in fornecedores %}
+                    <option value="{{ f.id }}">{{ f.nome_fantasia }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div id="clientes-data" style="display:none;">
+                <select>
+                    <option value="">-- selecione --</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.id }}">{{ c.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div id="fornecedores-data" style="display:none;">
+                <select>
+                    <option value="">-- selecione --</option>
+                    {% for f in fornecedores %}
+                    <option value="{{ f.id }}">{{ f.nome_fantasia }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12"><button class="btn btn-primary">Salvar</button></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleParceiroField() {
+        const tipo = document.getElementById('mov-tipo').value;
+        const label = document.getElementById('parceiro-label');
+        const parceiroSelect = document.getElementById('parceiro-select');
+        label.textContent = (tipo === 'entrada') ? 'Fornecedor' : 'Cliente';
+        if (tipo === 'entrada') {
+            return;
+        }
+        const clientesHtml = document.querySelector('#clientes-data select').innerHTML;
+        parceiroSelect.innerHTML = clientesHtml;
+    }
+    window.addEventListener('DOMContentLoaded', toggleParceiroField);
+
+    document.addEventListener('DOMContentLoaded', function(){
+    const tipoSel = document.getElementById('rev-parceiro-tipo');
+        const parceiroSel = document.getElementById('rev-parceiro-id');
+        const movSel = document.getElementById('rev-movimentos');
+        const confirmBtn = document.getElementById('rev-confirm');
+    const parceiroLabel = document.getElementById('rev-parceiro-label');
+
+        function loadMovs(){
+            const tipo = tipoSel.value;
+            const parceiro = parceiroSel.value;
+            if(!parceiro) { movSel.innerHTML = '<option value="">-- selecione parceiro --</option>'; return; }
+            fetch(`/movimentacoes/por_parceiro?parceiro_tipo=${encodeURIComponent(tipo)}&parceiro_id=${encodeURIComponent(parceiro)}`)
+                .then(r => r.json()).then(data => {
+                    movSel.innerHTML = '<option value="">-- selecione --</option>';
+                    data.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = `#${m.id} | ${m.tipo.toUpperCase()} | ${m.produto_descricao} | ${m.quantidade} | ${m.local}`;
+                        movSel.appendChild(opt);
+                    });
+                }).catch(err => {
+                    movSel.innerHTML = '<option value="">Erro ao carregar movimentações</option>';
+                    console.error(err);
+                });
+        }
+
+        function applyTipoFilter(){
+            const tipo = tipoSel.value;
+            if (parceiroLabel) parceiroLabel.textContent = (tipo === 'cliente') ? 'Cliente' : 'Fornecedor';
+            Array.from(parceiroSel.options).forEach(opt => {
+                if(!opt.value) return;
+                const is = opt.getAttribute('data-tipo');
+                opt.style.display = (is === tipo) ? '' : 'none';
+            });
+            parceiroSel.value = '';
+            movSel.innerHTML = '<option value="">-- selecione parceiro primeiro --</option>';
+        }
+
+        tipoSel.addEventListener('change', applyTipoFilter);
+        parceiroSel.addEventListener('change', loadMovs);
+
+        applyTipoFilter();
+
+        confirmBtn.addEventListener('click', function(e){
+            e.preventDefault();
+            const movId = movSel.value;
+            if(!movId){ alert('Selecione uma movimentação para reverter.'); return; }
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/movimentacoes/reverter';
+            const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = 'movimentacao_id'; inp.value = movId;
+            form.appendChild(inp);
+            document.body.appendChild(form);
+            form.submit();
+        });
+    });
+</script>
+{% endblock %}

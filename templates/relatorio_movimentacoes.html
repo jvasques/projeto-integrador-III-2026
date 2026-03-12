@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Relatório de Movimentações</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Relatório de Movimentações</h1>
+    
+    {% if date_from or date_to %}
+    <p><strong>Período:</strong> 
+        {% if date_from %}{{ date_from }}{% endif %}
+        {% if date_from and date_to %} até {% endif %}
+        {% if date_to %}{{ date_to }}{% endif %}
+    </p>
+    {% endif %}
+    
+    {% if report_type %}
+    <p><strong>Tipo:</strong> {{ report_type.replace('_', ' ').title() }}</p>
+    {% endif %}
+    
+    {% if warning %}
+    <div class="warning">{{ warning }}</div>
+    {% endif %}
+    
+    <div class="no-print">
+        <button onclick="window.print()">Imprimir/Salvar PDF</button>
+        <button onclick="window.close()">Fechar</button>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tipo</th>
+                <th>Produto</th>
+                <th>Quantidade</th>
+                <th>Local</th>
+                <th>Parceiro</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.id or '' }}</td>
+                <td>{{ row.tipo or '' }}</td>
+                <td>{{ row.produto_descricao or '' }}</td>
+                <td>{{ row.quantidade or '' }}</td>
+                <td>{{ row.local or '' }}</td>
+                <td>{{ row.parceiro or '' }}</td>
+                <td>{{ row.created_at or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <p style="margin-top: 30px; font-size: 12px; color: #666;">
+        Relatório gerado em {{ moment().format('DD/MM/YYYY HH:mm:ss') if moment else '' }}
+    </p>
+</body>
+</html>

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1 class="my-4">Dados da Empresa</h1>
+    <form method="POST" id="empresa-form" class="row g-3">
+        <div class="col-12 col-md-6 position-relative mb-2">
+            <div class="form-floating">
+                <input type="text" class="form-control pe-5" id="cnpj-empresa" name="cnpj" placeholder="CNPJ" maxlength="18" value="{{ empresa.cnpj if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="cnpj-empresa">CNPJ</label>
+            </div>
+            {% if can_edit %}
+            <button type="button" class="btn btn-secondary d-flex align-items-center justify-content-center position-absolute" id="buscar-cnpj" style="top: 50%; right: 10px; transform: translateY(-50%); width: 36px; height: 36px; padding: 0; display: none; z-index:2;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+                </svg>
+            </button>
+            {% endif %}
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="razao_social" name="razao_social" placeholder="Razão Social" value="{{ empresa.razao_social if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="razao_social">Razão Social</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="nome_fantasia" name="nome_fantasia" placeholder="Nome Fantasia" value="{{ empresa.nome_fantasia if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="nome_fantasia">Nome Fantasia</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="rua" name="rua" placeholder="Rua" value="{{ empresa.rua if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="rua">Rua</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="numero" name="numero" placeholder="Número" value="{{ empresa.numero if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="numero">Número</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="complemento" name="complemento" placeholder="Complemento" value="{{ empresa.complemento if empresa else '' }}" {% if not can_edit %}readonly{% endif %}>
+                <label for="complemento">Complemento</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="cep-empresa" name="cep" placeholder="CEP" maxlength="9" value="{{ empresa.cep if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="cep-empresa">CEP</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="bairro" name="bairro" placeholder="Bairro" value="{{ empresa.bairro if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="bairro">Bairro</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="cidade" name="cidade" placeholder="Cidade" value="{{ empresa.cidade if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="cidade">Cidade</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="estado" name="estado" placeholder="Estado" value="{{ empresa.estado if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="estado">Estado</label>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="telefone-empresa" name="telefone" placeholder="Telefone" maxlength="15" value="{{ empresa.telefone if empresa else '' }}" {% if not can_edit %}readonly{% endif %} required>
+                <label for="telefone-empresa">Telefone</label>
+            </div>
+        </div>
+        {% if can_edit %}
+                <div class="col-12">
+                        <button type="button" id="edit-save-button" class="btn btn-primary" aria-label="Editar ou salvar">
+                                {% if empresa %}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+                                    <path d="M12.146.854a.5.5 0 0 1 .708 0l2.292 2.292a.5.5 0 0 1 0 .708l-9.793 9.793a.5.5 0 0 1-.168.11l-4 1.5a.5.5 0 0 1-.65-.65l1.5-4a.5.5 0 0 1 .11-.168L12.146.854zM11.207 2L3 10.207V13h2.793L14 4.793 11.207 2z"/>
+                                </svg>
+                                {% else %}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
+                                    <path d="M8 7v6a1 1 0 0 1-2 0V7H0V5h6V-1a1 1 0 0 1 2 0V5h6v2H8z" />
+                                </svg>
+                                {% endif %}
+                        </button>
+                </div>
+        {% endif %}
+    </form>
+    <script>
+    (function() {
+        var cnpjEl = document.getElementById('cnpj-empresa');
+        if (cnpjEl) {
+            cnpjEl.addEventListener('input', function() {
+                [
+                    'razao_social', 'nome_fantasia', 'rua', 'numero', 'complemento',
+                    'cep-empresa', 'bairro', 'cidade', 'estado', 'telefone-empresa'
+                ].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+            });
+        }
+
+        function toggleLupaBtn() {
+            const cnpjInput = document.getElementById('cnpj-empresa');
+            const lupaBtn = document.getElementById('buscar-cnpj');
+            if (!cnpjInput || !lupaBtn) return;
+            if (!cnpjInput.hasAttribute('readonly')) {
+                lupaBtn.style.display = 'flex';
+            } else {
+                lupaBtn.style.display = 'none';
+            }
+        }
+
+        var editSaveBtn = document.getElementById('edit-save-button');
+        if (editSaveBtn) {
+            editSaveBtn.addEventListener('click', function() {
+                setTimeout(toggleLupaBtn, 100);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', toggleLupaBtn);
+
+        var buscarCnpjBtn = document.getElementById('buscar-cnpj');
+        if (buscarCnpjBtn) {
+            buscarCnpjBtn.addEventListener('click', async function() {
+                const cnpjInput = document.getElementById('cnpj-empresa');
+                if (!cnpjInput) return;
+                let cnpj = cnpjInput.value.replace(/\D/g, '');
+                if (cnpj.length !== 14) {
+                    alert('CNPJ inválido!');
+                    return;
+                }
+                try {
+                    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+                    if (!response.ok) throw new Error('CNPJ não encontrado!');
+                    const data = await response.json();
+                    cnpjInput.value = data.cnpj || cnpjInput.value;
+                    document.getElementById('razao_social').value = data.razao_social || '';
+                    document.getElementById('nome_fantasia').value = data.nome_fantasia || '';
+                    document.getElementById('rua').value = (data.descricao_tipo_de_logradouro || data.descricao_tipo_logradouro || '') + ' ' + (data.logradouro || '');
+                    document.getElementById('numero').value = data.numero || '';
+                    document.getElementById('complemento').value = data.complemento || '';
+                    document.getElementById('cep-empresa').value = data.cep || '';
+                    document.getElementById('bairro').value = data.bairro || '';
+                    document.getElementById('cidade').value = data.municipio || '';
+                    document.getElementById('estado').value = data.uf || '';
+                    document.getElementById('telefone-empresa').value = data.ddd_telefone_1 || '';
+                    setTimeout(()=>{
+                        try{
+                            if(window.formatCpfCnpj) cnpjInput.value = formatCpfCnpj(cnpjInput.value || '');
+                        }catch(e){}
+                    }, 60);
+                    setTimeout(()=>{
+                        try{
+                            const cepEl = document.getElementById('cep-empresa');
+                            const phoneEl = document.getElementById('telefone-empresa');
+                            if(window.formatCEP && cepEl) cepEl.value = formatCEP(cepEl.value || '');
+                            if(window.formatPhone && phoneEl) phoneEl.value = formatPhone(phoneEl.value || '');
+                        }catch(e){ }
+                    }, 80);
+                } catch (e) {
+                    alert('Erro ao buscar CNPJ: ' + (e.message || e));
+                }
+            });
+        }
+    })();
+    </script>
+{% endblock %}

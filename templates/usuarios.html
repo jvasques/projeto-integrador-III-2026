@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1 class="my-4">Gerenciar Usuários</h1>
+    {# Flashes are shown as toasts via base.html #}
+    <button class="btn btn-primary mb-3 add-usuario" onclick="openModal('usuario-modal')">Adicionar Usuário</button>
+    <div class="table-responsive">
+        <table class="table table-striped table-mobile-friendly">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuário</th>
+                    <th>Função</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                    <tr>
+                        <td data-label="ID">{{ usuario.id }}</td>
+                        <td data-label="Usuário">{{ usuario.username }}</td>
+                        <td data-label="Função">{{ usuario.role }}</td>
+                        <td data-label="Ações">
+                            {% if usuario.username != 'admin' %}
+                            <button class="btn-edit" onclick="resetarSenha('{{ usuario.id }}', '{{ usuario.username }}')">Resetar Senha</button>
+                                                                <button class="btn-delete" onclick="deleteUsuario('{{ usuario.id }}')" aria-label="Excluir usuário">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                                                            <path d="M5.5 5.5A.5.5 0 0 1 6 5h4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5v-7z"/>
+                                                                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 1 1 0-2h3.11a1 1 0 0 1 .89-.58h2.99a1 1 0 0 1 .89.58H14.5a1 1 0 0 1 1 1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118z"/>
+                                                                        </svg>
+                                                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="usuario-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('usuario-modal')">×</span>
+            <h2>Cadastrar Usuário</h2>
+            <form method="POST">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <input type="text" class="form-control" name="username" placeholder="Usuário" required>
+                    </div>
+                    <div class="col-12">
+                        <input type="password" class="form-control" name="password" placeholder="Senha" required>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Cadastrar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="reset-password-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('reset-password-modal')">×</span>
+            <h2>Senha temporária gerada</h2>
+            <p>Usuário: <span id="reset-username"></span></p>
+            <p>Senha temporária: <strong id="reset-temp-password"></strong></p>
+            <p>O usuário deverá trocar a senha no próximo login.</p>
+            <button class="btn btn-primary" onclick="closeModal('reset-password-modal')">OK</button>
+        </div>
+    </div>
+    <script>
+    function resetarSenha(id, username) {
+        if (!confirm('Deseja realmente resetar a senha deste usuário?')) return;
+        fetch(`/usuarios/reset/${id}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.temp_password) {
+                    document.getElementById('reset-username').innerText = username;
+                    document.getElementById('reset-temp-password').innerText = data.temp_password;
+                    openModal('reset-password-modal');
+                } else {
+                    alert(data.error || 'Erro ao resetar senha.');
+                }
+            });
+    }
+    </script>
+    
+{% endblock %}

@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1 class="my-4">Clientes</h1>
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <button class="btn btn-primary add-cliente" onclick="openModal('cliente-modal')">Adicionar Cliente</button>
+        <form class="d-inline-flex align-items-center gap-2" method="GET" action="{{ url_for('clientes') }}">
+            <label class="me-2 mb-0">Mostrar:</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="status" id="filtro-ativos" value="ativos" {{ 'checked' if filtro_status == 'ativos' }} onchange="this.form.submit()">
+                <label class="form-check-label" for="filtro-ativos">Ativos</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="status" id="filtro-inativos" value="inativos" {{ 'checked' if filtro_status == 'inativos' }} onchange="this.form.submit()">
+                <label class="form-check-label" for="filtro-inativos">Inativos</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="status" id="filtro-todos" value="todos" {{ 'checked' if filtro_status == 'todos' }} onchange="this.form.submit()">
+                <label class="form-check-label" for="filtro-todos">Todos</label>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped table-mobile-friendly">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Documento</th>
+                    <th>Telefone</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cliente in clientes %}
+                    <tr class="{{ 'table-secondary text-muted' if not cliente.ativo }}">
+                        <td data-label="Código">{{ cliente.id }}</td>
+                        <td data-label="Nome">{{ cliente.nome }}</td>
+                        <td data-label="Documento">{{ cliente.documento }}</td>
+                        <td data-label="Telefone">{{ cliente.telefone }}</td>
+                        <td data-label="Status">
+                            {% if cliente.ativo %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Ações">
+                            <button class="btn-edit" onclick="editCliente('{{ cliente.id }}')" aria-label="Editar cliente" title="Editar cliente">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+                                    <path d="M12.146.854a.5.5 0 0 1 .708 0l2.292 2.292a.5.5 0 0 1 0 .708l-9.793 9.793a.5.5 0 0 1-.168.11l-4 1.5a.5.5 0 0 1-.65-.65l1.5-4a.5.5 0 0 1 .11-.168L12.146.854zM11.207 2L3 10.207V13h2.793L14 4.793 11.207 2z"/>
+                                </svg>
+                            </button>
+                            <button class="btn-delete" onclick="deleteCliente('{{ cliente.id }}')" aria-label="Excluir cliente" title="Excluir cliente">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                    <path d="M5.5 5.5A.5.5 0 0 1 6 5h4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5v-7z"/>
+                                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 1 1 0-2h3.11a1 1 0 0 1 .89-.58h2.99a1 1 0 0 1 .89.58H14.5a1 1 0 0 1 1 1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118z"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-sm {{ 'btn-warning' if cliente.ativo else 'btn-success' }}" onclick="toggleCliente('{{ cliente.id }}')" aria-label="{{ 'Inativar' if cliente.ativo else 'Ativar' }} cliente" title="{{ 'Inativar' if cliente.ativo else 'Ativar' }} cliente">
+                                {{ 'Inativar' if cliente.ativo else 'Ativar' }}
+                            </button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="cliente-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('cliente-modal')">×</span>
+            <h2>Cadastrar Cliente</h2>
+            <form method="POST" class="row g-3">
+                <div class="col-12"><input type="text" class="form-control" id="cliente-nome" name="nome" placeholder="Nome Completo" required></div>
+                <div class="col-12 col-md-6 position-relative mb-2">
+                    <input type="text" class="form-control pe-5" id="cliente-documento" name="documento" placeholder="CPF ou CNPJ" maxlength="18" required>
+                    <button type="button" disabled class="btn btn-secondary d-flex align-items-center justify-content-center position-absolute" id="buscar-cnpj-cliente" style="top:50%; right:10px; transform: translateY(-50%); width:36px; height:36px; padding:0; display:none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
+                    </button>
+                </div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="cliente-rua" name="rua" placeholder="Rua" required></div>
+                <div class="col-12 col-md-3"><input type="text" class="form-control" id="cliente-numero" name="numero" placeholder="Número" required></div>
+                <div class="col-12 col-md-3"><input type="text" class="form-control" id="cliente-complemento" name="complemento" placeholder="Complemento"></div>
+                <div class="col-12 col-md-4 position-relative">
+                    <input type="text" class="form-control pe-5" id="cliente-cep" name="cep" placeholder="CEP" maxlength="9" required>
+                    <button type="button" disabled class="btn btn-secondary d-flex align-items-center justify-content-center position-absolute" id="buscar-cep-cliente" style="top:50%; right:10px; transform: translateY(-50%); width:36px; height:36px; padding:0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
+                    </button>
+                </div>
+                <div class="col-12 col-md-4"><input type="text" class="form-control" id="cliente-bairro" name="bairro" placeholder="Bairro" required></div>
+                <div class="col-12 col-md-4"><input type="text" class="form-control" id="cliente-cidade" name="cidade" placeholder="Cidade" required></div>
+                <div class="col-12 col-md-4"><input type="text" class="form-control" id="cliente-estado" name="estado" placeholder="Estado" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="cliente-telefone" name="telefone" placeholder="Telefone" maxlength="15" required></div>
+                <div class="col-12"><button type="submit" class="btn btn-primary">Cadastrar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-cliente-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('edit-cliente-modal')">×</span>
+            <h2>Editar Cliente</h2>
+            <form method="POST" class="row g-3">
+                <input type="hidden" id="edit-cliente-id" name="id">
+                <div class="col-12"><input type="text" class="form-control" id="edit-cliente-nome" name="nome" placeholder="Nome Completo" required></div>
+                <div class="col-12 col-md-6 position-relative mb-2">
+                    <input type="text" class="form-control pe-5" id="edit-cliente-documento" name="documento" placeholder="CPF ou CNPJ" maxlength="18" required>
+                    <button type="button" disabled class="btn btn-secondary d-flex align-items-center justify-content-center position-absolute" id="buscar-cnpj-edit-cliente" style="top:50%; right:10px; transform: translateY(-50%); width:36px; height:36px; padding:0; display:none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
+                    </button>
+                </div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-cliente-rua" name="rua" placeholder="Rua" required></div>
+                <div class="col-12 col-md-3"><input type="text" class="form-control" id="edit-cliente-numero" name="numero" placeholder="Número" required></div>
+                <div class="col-12 col-md-3"><input type="text" class="form-control" id="edit-cliente-complemento" name="complemento" placeholder="Complemento"></div>
+                <div class="col-12 col-md-4 position-relative">
+                    <input type="text" class="form-control pe-5" id="edit-cliente-cep" name="cep" placeholder="CEP" maxlength="9" required>
+                    <button type="button" disabled class="btn btn-secondary d-flex align-items-center justify-content-center position-absolute" id="buscar-cep-edit-cliente" style="top:50%; right:10px; transform: translateY(-50%); width:36px; height:36px; padding:0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
+                    </button>
+                </div>
+                <div class="col-12 col-md-4"><input type="text" class="form-control" id="edit-cliente-bairro" name="bairro" placeholder="Bairro" required></div>
+                <div class="col-12 col-md-4"><input type="text" class="form-control" id="edit-cliente-cidade" name="cidade" placeholder="Cidade" required></div>
+                <div class="col-12 col-md-4"><input type="text" class="form-control" id="edit-cliente-estado" name="estado" placeholder="Estado" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-cliente-telefone" name="telefone" placeholder="Telefone" maxlength="15" required></div>
+                <div class="col-12"><button type="submit" class="btn btn-primary">Atualizar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function toggleLupaCliente() {
+        const c = document.getElementById('cliente-documento');
+        const b = document.getElementById('buscar-cnpj-cliente');
+        if (c && !c.hasAttribute('readonly') && b) b.style.display = 'flex'; else if (b) b.style.display = 'none';
+        const ce = document.getElementById('edit-cliente-documento');
+        const be = document.getElementById('buscar-cnpj-edit-cliente');
+        if (ce && !ce.hasAttribute('readonly') && be) be.style.display = 'flex'; else if (be) be.style.display = 'none';
+    }
+    window.addEventListener('DOMContentLoaded', toggleLupaCliente);
+
+    function limparCamposCliente(prefix=''){
+        const ids = ['cliente-nome','cliente-rua','cliente-numero','cliente-complemento','cliente-cep','cliente-bairro','cliente-cidade','cliente-estado','cliente-telefone'];
+        ids.forEach(id=>{
+            const el = document.getElementById((prefix?('edit-'+id):id));
+            if(el) el.value = '';
+        });
+    }
+    document.getElementById('cliente-documento').addEventListener('input', ()=> limparCamposCliente());
+    document.getElementById('edit-cliente-documento').addEventListener('input', ()=> limparCamposCliente('edit'));
+
+    function toggleSearchButtons(){
+        const doc = (document.getElementById('cliente-documento')||{value:''}).value.replace(/\D/g,'');
+        const docEdit = (document.getElementById('edit-cliente-documento')||{value:''}).value.replace(/\D/g,'');
+        const cep = (document.getElementById('cliente-cep')||{value:''}).value.replace(/\D/g,'');
+        const cepEdit = (document.getElementById('edit-cliente-cep')||{value:''}).value.replace(/\D/g,'');
+        const btnDoc = document.getElementById('buscar-cnpj-cliente');
+        const btnDocEdit = document.getElementById('buscar-cnpj-edit-cliente');
+        const btnCep = document.getElementById('buscar-cep-cliente');
+        const btnCepEdit = document.getElementById('buscar-cep-edit-cliente');
+        if(btnDoc) btnDoc.disabled = doc.length !== 14;
+        if(btnDocEdit) btnDocEdit.disabled = docEdit.length !== 14;
+        if(btnCep) btnCep.disabled = cep.length !== 8;
+        if(btnCepEdit) btnCepEdit.disabled = cepEdit.length !== 8;
+        const elDoc = document.getElementById('cliente-documento'); if(elDoc && !elDoc.hasAttribute('readonly')) { if(btnDoc) btnDoc.style.display = 'flex'; }
+        const elDocE = document.getElementById('edit-cliente-documento'); if(elDocE && !elDocE.hasAttribute('readonly')) { if(btnDocEdit) btnDocEdit.style.display = 'flex'; }
+    }
+    ['cliente-documento','edit-cliente-documento','cliente-cep','edit-cliente-cep'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', ()=> toggleSearchButtons());
+    });
+    toggleSearchButtons();
+
+    async function buscarCnpjCliente(cnpjFieldId, prefix=''){
+        const input = document.getElementById(cnpjFieldId);
+        let doc = input.value.replace(/\D/g,'');
+        if(doc.length === 11){ return; }
+        if(doc.length !== 14){ alert('CNPJ inválido'); return; }
+        try{
+            const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`);
+            if(!res.ok) throw new Error('CNPJ não encontrado');
+            const data = await res.json();
+            const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+            const base = prefix ? 'edit-' : '';
+            setIf(base+'cliente-documento', data.cnpj || '');
+            setTimeout(()=>{
+                try{
+                    const docEl = document.getElementById(base+'cliente-documento');
+                    if(window.formatCpfCnpj && docEl) docEl.value = formatCpfCnpj(docEl.value || '');
+                }catch(e){}
+            }, 60);
+            setIf(base+'cliente-nome', data.nome || data.razao_social || '');
+            setIf(base+'cliente-rua', (data.descricao_tipo_de_logradouro||data.descricao_tipo_logradouro||'') + ' ' + (data.logradouro||''));
+            setIf(base+'cliente-numero', data.numero || '');
+            setIf(base+'cliente-complemento', data.complemento || '');
+            setIf(base+'cliente-cep', data.cep || '');
+            setIf(base+'cliente-bairro', data.bairro || '');
+            setIf(base+'cliente-cidade', data.municipio || '');
+            setIf(base+'cliente-estado', data.uf || '');
+            setIf(base+'cliente-telefone', data.ddd_telefone_1 || '');
+            setTimeout(()=>{
+                try{
+                    const cepEl = document.getElementById(base+'cliente-cep');
+                    const phoneEl = document.getElementById(base+'cliente-telefone');
+                    if(window.formatCEP && cepEl) cepEl.value = formatCEP(cepEl.value || '');
+                    if(window.formatPhone && phoneEl) phoneEl.value = formatPhone(phoneEl.value || '');
+                }catch(e){}
+            }, 80);
+        }catch(e){ alert('Erro ao buscar CNPJ: '+e.message); }
+    }
+    const btnBuscarC = document.getElementById('buscar-cnpj-cliente'); if(btnBuscarC) btnBuscarC.addEventListener('click', ()=> buscarCnpjCliente('cliente-documento'));
+    const btnBuscarCEdit = document.getElementById('buscar-cnpj-edit-cliente'); if(btnBuscarCEdit) btnBuscarCEdit.addEventListener('click', ()=> buscarCnpjCliente('edit-cliente-documento','edit'));
+
+    async function buscarCepCliente(cepFieldId, prefix=''){
+        const input = document.getElementById(cepFieldId);
+        let cep = (input.value||'').replace(/\D/g,'');
+        if(cep.length !== 8){ alert('CEP inválido. Informe 8 dígitos.'); return; }
+        try{
+            const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`);
+            if(!res.ok) throw new Error('CEP não encontrado');
+            const data = await res.json();
+            const base = prefix ? 'edit-' : '';
+            const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
+            set(base+'cliente-estado', data.state || '');
+            set(base+'cliente-cidade', data.city || '');
+            set(base+'cliente-bairro', data.neighborhood || '');
+            set(base+'cliente-rua', data.street || '');
+            setTimeout(()=>{
+                try{
+                    const cepEl = document.getElementById(base+'cliente-cep');
+                    const phoneEl = document.getElementById(base+'cliente-telefone');
+                    if(window.formatCEP && cepEl) cepEl.value = formatCEP(cepEl.value || '');
+                    if(window.formatPhone && phoneEl) phoneEl.value = formatPhone(phoneEl.value || '');
+                }catch(e){}
+            }, 80);
+        }catch(e){ alert('Erro ao buscar CEP: '+e.message); }
+    }
+    const btnBuscarCep = document.getElementById('buscar-cep-cliente'); if(btnBuscarCep) btnBuscarCep.addEventListener('click', ()=> buscarCepCliente('cliente-cep'));
+    const btnBuscarCepEdit = document.getElementById('buscar-cep-edit-cliente'); if(btnBuscarCepEdit) btnBuscarCepEdit.addEventListener('click', ()=> buscarCepCliente('edit-cliente-cep','edit'));
+
+    async function editCliente(id){
+        try{
+            const res = await fetch(`/clientes/edit/${id}`);
+            if(!res.ok) throw new Error('Erro ao obter cliente: '+res.status);
+            const data = await res.json();
+            document.getElementById('edit-cliente-id').value = data.id || '';
+            document.getElementById('edit-cliente-nome').value = data.nome || '';
+            document.getElementById('edit-cliente-documento').value = data.documento || '';
+            document.getElementById('edit-cliente-rua').value = data.rua || '';
+            document.getElementById('edit-cliente-numero').value = data.numero || '';
+            document.getElementById('edit-cliente-complemento').value = data.complemento || '';
+            document.getElementById('edit-cliente-cep').value = data.cep || '';
+            document.getElementById('edit-cliente-bairro').value = data.bairro || '';
+            document.getElementById('edit-cliente-cidade').value = data.cidade || '';
+            document.getElementById('edit-cliente-estado').value = data.estado || '';
+            document.getElementById('edit-cliente-telefone').value = data.telefone || '';
+            openModal('edit-cliente-modal');
+        }catch(e){ alert(e.message); console.error(e); }
+    }
+
+    async function deleteCliente(id){
+        if(!confirm('Confirma exclusão do cliente?')) return;
+        try{
+            const res = await fetch(`/clientes/delete/${id}`, {method:'POST'});
+            const json = await res.json();
+            if(!res.ok) {
+                if(json.has_movimentacoes){
+                    if(confirm(json.error + '\n\nDeseja inativar este cliente agora?')){
+                        await toggleCliente(id);
+                    }
+                    return;
+                }
+                throw new Error(json.error || 'Erro');
+            }
+            alert(json.success || 'Cliente excluído');
+            location.reload();
+        }catch(e){ alert('Erro: '+e.message); }
+    }
+
+    async function toggleCliente(id){
+        try{
+            const res = await fetch(`/clientes/toggle/${id}`, {method:'POST'});
+            const json = await res.json();
+            if(!res.ok) throw new Error(json.error || 'Erro');
+            alert(json.success);
+            location.reload();
+        }catch(e){ alert('Erro: '+e.message); }
+    }
+    </script>
+{% endblock %}

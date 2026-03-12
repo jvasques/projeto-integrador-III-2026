@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cadastro</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-page="{{ request.path }}"{% if session.user %} data-role="{{ session.user.role }}"{% endif %}>
+    <!-- Cabeçalho -->
+    <header class="brand-header" role="banner">
+        <div class="container d-flex align-items-center justify-content-between">
+            <a href="{{ url_for('empresa') if session.user else '#' }}" class="brand-logo m-0 text-center text-md-start mx-auto mx-md-0">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logotipo da empresa" class="brand-logo-img">
+            </a>
+            <div class="brand-tags text-end d-none d-sm-block">
+                Qualidade <span class="sep">|</span> Logística <span class="sep">|</span> Refrigeração <span class="sep">|</span> Proteção de máquina
+            </div>
+        </div>
+        <svg class="wave" viewBox="0 0 1440 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M0,80 C160,40 320,40 480,70 C640,100 800,50 960,70 C1120,90 1280,50 1440,70 L1440,120 L0,120 Z"></path>
+        </svg>
+    </header>
+    <div class="container-fluid">
+        <div class="row">
+            {% if not request.path.startswith('/login') %}
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse" id="sidebarMenu">
+                <div class="position-sticky pt-3">
+                    <h2 class="px-3">Menu</h2>
+                    {% if session.user %}
+                        <p class="px-3">Bem vindo, <b>{{ session.user.username }}</b>.</p>
+                        <ul class="nav flex-column">
+                            {% if session.user.role == 'admin' %}
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.path.startswith('/empresa') %}active-page{% endif %}" href="{{ url_for('empresa') }}">Empresa</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('usuarios') }}">Usuários</a>
+                                </li>
+                            {% else %}
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.path.startswith('/empresa') %}active-page{% endif %}" href="{{ url_for('empresa') }}">Empresa</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('fornecedores') }}">Fornecedores</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('clientes') }}">Clientes</a>
+                                </li>
+                                {# Produtos - expand to show subpages: Estoque, Locais, Movimentações #}
+                                {% set prod_active = request.path.startswith('/produtos') or request.path.startswith('/locais') or request.path.startswith('/movimentacoes') %}
+                                <li class="nav-item">
+                                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#produtosCollapse" role="button" aria-expanded="{{ 'true' if prod_active else 'false' }}" aria-controls="produtosCollapse">
+                                        Estoque
+                                        <span class="badge bg-secondary ms-2">▾</span>
+                                    </a>
+                                    <div class="collapse {% if prod_active %}show{% endif %}" id="produtosCollapse">
+                                        <ul class="nav flex-column ms-3">
+                                            <li class="nav-item"><a class="nav-link {% if request.path.startswith('/produtos') %}fw-bold{% endif %}" href="{{ url_for('produtos') }}">Produtos</a></li>
+                                            <li class="nav-item"><a class="nav-link {% if request.path.startswith('/locais') %}fw-bold{% endif %}" href="{{ url_for('locais') }}">Locais de Estoque</a></li>
+                                            <li class="nav-item"><a class="nav-link {% if request.path.startswith('/movimentacoes') %}fw-bold{% endif %}" href="{{ url_for('movimentacoes') }}">Movimentações</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
+                            {% endif %}
+                            <li class="nav-item">
+                                <a class="nav-link text-danger" href="{{ url_for('logout') }}">Sair</a>
+                            </li>
+                        </ul>
+                    {% endif %}
+                </div>
+            </nav>
+            {% endif %}
+
+                {% if request.path.startswith('/login') %}
+                <main class="col-12 px-md-4">
+                {% else %}
+                <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                {% endif %}
+                {% if not request.path.startswith('/login') and not session.user %}
+                <nav class="navbar navbar-expand-md navbar-light bg-light d-md-none">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </nav>
+                {% endif %}
+                {# Centralized toast container for flashed messages (auto-dismiss after 3s) #}
+                <div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+                    <div id="flash-toasts">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="toast align-items-center text-bg-{{ 'success' if category == 'success' else 'danger' }} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+                                        <div class="d-flex flex-column">
+                                            <div class="d-flex w-100 align-items-center">
+                                                <div class="toast-body flex-grow-1">{{ message }}</div>
+                                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                                            </div>
+                                            <div class="toast-progress">
+                                                <div class="bar"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+            <!-- Rodapé -->
+            <footer class="brand-footer mt-4" role="contentinfo">
+                <div class="container text-center small footer-note">
+                    Projeto Integrador 2025 / DRP04-Projeto Integrador em Computação II-Turma 001
+                </div>
+            </footer>
+
+            <!-- Botão de Acessibilidade -->
+            <button id="a11y-toggle" class="a11y-toggle" type="button" aria-pressed="false" aria-label="Alternar modo de acessibilidade (alto contraste e fonte maior)" title="Acessibilidade (alto contraste e fonte maior)" onclick="if(window.toggleA11y){window.toggleA11y()}else{(function(){var r=document.documentElement;var on=!(r.classList.contains('a11y-high-contrast'));r.classList.toggle('a11y-high-contrast', on);r.classList.toggle('a11y-font-large', on);try{localStorage.setItem('a11y:enabled', on?'1':'0');localStorage.setItem('a11y:fontLarge', on?'1':'0');}catch(e){}var b=document.getElementById('a11y-toggle');if(b)b.setAttribute('aria-pressed', String(on));})();}">
+                Aa
+            </button>
+
+            <!-- Botão flutuante do guia operacional -->
+            {% if not request.path.startswith('/login') and session.user %}
+            <button id="help-toggle" class="help-toggle" type="button" aria-label="Abrir guia operacional" title="Ajuda (guia da página)">?</button>
+            {% endif %}
+
+            {% if not request.path.startswith('/login') and session.user %}
+            <nav class="mobile-bottom-nav d-md-none fixed-bottom bg-light border-top">
+                <div class="container d-flex justify-content-around py-1">
+                    {# Mobile produtos submenu (collapse) - appears above the nav when toggled #}
+                    <div class="mobile-submenu collapse" id="mobileProdutosCollapse">
+                        <a class="mobile-submenu-item {% if request.path.startswith('/produtos') %}active-sub{% endif %}" href="{{ url_for('produtos') }}">Produtos</a>
+                        <a class="mobile-submenu-item {% if request.path.startswith('/locais') %}active-sub{% endif %}" href="{{ url_for('locais') }}">Locais</a>
+                        <a class="mobile-submenu-item {% if request.path.startswith('/movimentacoes') %}active-sub{% endif %}" href="{{ url_for('movimentacoes') }}">Movimentações</a>
+                    </div>
+                    {% if session.user.role == 'admin' %}
+                        <a class="nav-icon {% if request.path.startswith('/empresa') %}active-nav{% endif %}" href="{{ url_for('empresa') }}" title="Empresa">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="bi bi-building" aria-hidden="true"></i>
+                                <small>Empresa</small>
+                            </div>
+                        </a>
+                        <a class="nav-icon {% if request.path.startswith('/usuarios') %}active-nav{% endif %}" href="{{ url_for('usuarios') }}" title="Usuários">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="bi bi-people" aria-hidden="true"></i>
+                                <small>Usuários</small>
+                            </div>
+                        </a>
+                    {% else %}
+                        <a class="nav-icon {% if request.path.startswith('/empresa') %}active-nav{% endif %}" href="{{ url_for('empresa') }}" title="Empresa">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="bi bi-building" aria-hidden="true"></i>
+                                <small>Empresa</small>
+                            </div>
+                        </a>
+                        <a class="nav-icon {% if request.path.startswith('/fornecedores') %}active-nav{% endif %}" href="{{ url_for('fornecedores') }}" title="Fornecedores">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="bi bi-people-fill" aria-hidden="true"></i>
+                                <small>Fornecedores</small>
+                            </div>
+                        </a>
+                        <a class="nav-icon {% if request.path.startswith('/clientes') %}active-nav{% endif %}" href="{{ url_for('clientes') }}" title="Clientes">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="bi bi-person" aria-hidden="true"></i>
+                                <small>Clientes</small>
+                            </div>
+                        </a>
+                        <a class="nav-icon prod-toggle {% if request.path.startswith('/produtos') or request.path.startswith('/locais') or request.path.startswith('/movimentacoes') %}active-nav{% endif %}" href="#mobileProdutosCollapse" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="mobileProdutosCollapse" title="Produtos">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="bi bi-box-seam" aria-hidden="true"></i>
+                                <small>Estoque</small>
+                            </div>
+                        </a>
+                    {% endif %}
+                    <a class="nav-icon text-danger {% if request.path.startswith('/logout') %}active-nav{% endif %}" href="{{ url_for('logout') }}" title="Sair">
+                        <div class="d-flex flex-column align-items-center">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                            <small>Sair</small>
+                        </div>
+                    </a>
+                </div>
+            </nav>
+            {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}" onerror="console.error('Falha ao carregar script.js')"></script>
+    <!-- VLibras - Assistente de Libras -->
+    <div vw class="enabled">
+        <div vw-access-button class="active" role="button" aria-label="Ativar assistente em Libras"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>new window.VLibras.Widget('https://vlibras.gov.br/app');</script>
+    <script>
+        try { if(window.applyA11yState) window.applyA11yState(); } catch(e){}
+        document.addEventListener('DOMContentLoaded', function () {
+            var container = document.getElementById('flash-toasts');
+            if (!container) return;
+            var toasts = Array.from(container.querySelectorAll('.toast'));
+            var seen = new Set();
+            toasts.forEach(function (toastEl) {
+                var msgEl = toastEl.querySelector('.toast-body');
+                var text = msgEl ? msgEl.innerText.trim() : '';
+                if (seen.has(text)) {
+                    toastEl.remove();
+                    return;
+                }
+                seen.add(text);
+                try {
+                    var bar = toastEl.querySelector('.toast-progress > .bar');
+                    if (bar) {
+                        bar.style.transform = 'scaleX(1)';
+                        requestAnimationFrame(function () {
+                            bar.style.transition = 'transform linear 3s';
+                            bar.style.transform = 'scaleX(0)';
+                        });
+                    }
+                    var toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+                } catch (e) {
+                    console.error('Erro ao iniciar toast:', e);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

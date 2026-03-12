@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1 class="my-4">Fornecedores</h1>
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <button class="btn btn-primary add-fornecedor" onclick="openModal('fornecedor-modal')">Adicionar Fornecedor</button>
+        <form class="d-inline-flex align-items-center gap-2" method="GET" action="{{ url_for('fornecedores') }}">
+            <label class="me-2 mb-0">Mostrar:</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="status" id="filtro-ativos" value="ativos" {{ 'checked' if filtro_status == 'ativos' }} onchange="this.form.submit()">
+                <label class="form-check-label" for="filtro-ativos">Ativos</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="status" id="filtro-inativos" value="inativos" {{ 'checked' if filtro_status == 'inativos' }} onchange="this.form.submit()">
+                <label class="form-check-label" for="filtro-inativos">Inativos</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="status" id="filtro-todos" value="todos" {{ 'checked' if filtro_status == 'todos' }} onchange="this.form.submit()">
+                <label class="form-check-label" for="filtro-todos">Todos</label>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped table-mobile-friendly">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Fornecedor</th>
+                    <th>Telefone</th>
+                    <th>Representante</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fornecedor in fornecedores %}
+                    <tr class="{{ 'table-secondary text-muted' if not fornecedor.ativo }}">
+                        <td data-label="Código">{{ fornecedor.id }}</td>
+                        <td data-label="Fornecedor">{{ fornecedor.nome_fantasia if fornecedor.nome_fantasia else fornecedor.razao_social }}</td>
+                        <td data-label="Telefone">{{ fornecedor.telefone }}</td>
+                        <td data-label="Representante">{{ fornecedor.representante }}</td>
+                        <td data-label="Status">
+                            {% if fornecedor.ativo %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Ações">
+                                                        <button class="btn-edit" onclick="editFornecedor('{{ fornecedor.id }}')" aria-label="Editar fornecedor" title="Editar fornecedor">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+                                                                    <path d="M12.146.854a.5.5 0 0 1 .708 0l2.292 2.292a.5.5 0 0 1 0 .708l-9.793 9.793a.5.5 0 0 1-.168.11l-4 1.5a.5.5 0 0 1-.65-.65l1.5-4a.5.5 0 0 1 .11-.168L12.146.854zM11.207 2L3 10.207V13h2.793L14 4.793 11.207 2z"/>
+                                                                </svg>
+                                                        </button>
+                                                        <button class="btn-delete" onclick="deleteFornecedor('{{ fornecedor.id }}')" aria-label="Excluir fornecedor" title="Excluir fornecedor">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 5h4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5v-7z"/>
+                                                                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 1 1 0-2h3.11a1 1 0 0 1 .89-.58h2.99a1 1 0 0 1 .89.58H14.5a1 1 0 0 1 1 1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118z"/>
+                                                                </svg>
+                                                        </button>
+                                                        <button class="btn btn-sm {{ 'btn-warning' if fornecedor.ativo else 'btn-success' }}" onclick="toggleFornecedor('{{ fornecedor.id }}')" aria-label="{{ 'Inativar' if fornecedor.ativo else 'Ativar' }} fornecedor" title="{{ 'Inativar' if fornecedor.ativo else 'Ativar' }} fornecedor">
+                                                            {{ 'Inativar' if fornecedor.ativo else 'Ativar' }}
+                                                        </button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="fornecedor-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('fornecedor-modal')">×</span>
+            <h2>Cadastrar Fornecedor</h2>
+            <form method="POST" class="row g-3">
+                <div class="col-12 col-md-6 position-relative mb-2">
+                    <input type="text" class="form-control pe-5" id="cnpj-fornecedor" name="cnpj" placeholder="CNPJ" maxlength="18" required>
+                    <button type="button" class="btn btn-secondary d-flex align-items-center justify-content-center position-absolute" id="buscar-cnpj-fornecedor" style="top:50%; right:10px; transform: translateY(-50%); width:36px; height:36px; padding:0; display:none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
+                    </button>
+                </div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="razao_social" placeholder="Razão Social" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="nome_fantasia" placeholder="Nome Fantasia"></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="rua" placeholder="Rua" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="numero" placeholder="Número" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="complemento" placeholder="Complemento"></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="cep-fornecedor" name="cep" placeholder="CEP" maxlength="9" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="bairro" placeholder="Bairro" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="cidade" placeholder="Cidade" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="estado" placeholder="Estado" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="telefone-fornecedor" name="telefone" placeholder="Telefone" maxlength="15" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" name="representante" placeholder="Representante" required></div>
+                <div class="col-12"><button type="submit" class="btn btn-primary">Cadastrar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-fornecedor-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('edit-fornecedor-modal')">×</span>
+            <h2>Editar Fornecedor</h2>
+            <form method="POST" class="row g-3">
+                <input type="hidden" id="edit-fornecedor-id" name="id">
+                <div class="col-12 col-md-6 position-relative mb-2"><input type="text" class="form-control pe-5" id="edit-cnpj-fornecedor" name="cnpj" placeholder="CNPJ" maxlength="18" required>
+                    <button type="button" class="btn btn-secondary d-flex align-items-center justify-content-center position-absolute" id="buscar-cnpj-edit-fornecedor" style="top:50%; right:10px; transform: translateY(-50%); width:36px; height:36px; padding:0; display:none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
+                    </button>
+                </div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-razao_social" name="razao_social" placeholder="Razão Social" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-nome_fantasia" name="nome_fantasia" placeholder="Nome Fantasia"></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-rua" name="rua" placeholder="Rua" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-numero" name="numero" placeholder="Número" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-complemento" name="complemento" placeholder="Complemento"></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-cep-fornecedor" name="cep" placeholder="CEP" maxlength="9" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-bairro" name="bairro" placeholder="Bairro" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-cidade" name="cidade" placeholder="Cidade" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-estado" name="estado" placeholder="Estado" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-telefone-fornecedor" name="telefone" placeholder="Telefone" maxlength="15" required></div>
+                <div class="col-12 col-md-6"><input type="text" class="form-control" id="edit-representante" name="representante" placeholder="Representante" required></div>
+                <div class="col-12"><button type="submit" class="btn btn-primary">Atualizar</button></div>
+            </form>
+        </div>
+    </div>
+    <script>
+    function toggleLupaFornecedor() {
+        const cnpj = document.getElementById('cnpj-fornecedor');
+        const btn = document.getElementById('buscar-cnpj-fornecedor');
+        if (cnpj && !cnpj.hasAttribute('readonly')) btn.style.display = 'flex'; else if (btn) btn.style.display = 'none';
+        const cnpjEdit = document.getElementById('edit-cnpj-fornecedor');
+        const btnEdit = document.getElementById('buscar-cnpj-edit-fornecedor');
+        if (cnpjEdit && !cnpjEdit.hasAttribute('readonly')) btnEdit.style.display = 'flex'; else if (btnEdit) btnEdit.style.display = 'none';
+    }
+    window.addEventListener('DOMContentLoaded', toggleLupaFornecedor);
+
+    function limparCamposFornecedor(prefix = ''){
+        const ids = ['razao_social','nome_fantasia','rua','numero','complemento','cep-fornecedor','bairro','cidade','estado','telefone-fornecedor'];
+        ids.forEach(id=>{
+            const el = document.getElementById((prefix?prefix+'-':'')+id) || document.getElementsByName(id)[0];
+            if(el) el.value = '';
+        });
+    }
+    document.getElementById('cnpj-fornecedor').addEventListener('input', ()=> limparCamposFornecedor());
+    document.getElementById('edit-cnpj-fornecedor').addEventListener('input', ()=> limparCamposFornecedor('edit'));
+
+    async function buscarCnpj(cnpjFieldId, prefix=''){
+        const input = document.getElementById(cnpjFieldId);
+        let cnpj = input.value.replace(/\D/g,'');
+        if(cnpj.length !== 14){ alert('CNPJ inválido'); return; }
+        try{
+            const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+            if(!res.ok) throw new Error('CNPJ não encontrado');
+            const data = await res.json();
+            const setIf = (id, name, val) => {
+                let el = document.getElementById(id);
+                if (!el && name) el = document.getElementsByName(name)[0];
+                if (el) el.value = val;
+            };
+            const base = prefix ? (prefix + '-') : '';
+            setIf(base + 'cnpj-fornecedor', 'cnpj', data.cnpj || '');
+            setTimeout(()=>{
+                try{
+                    const cnpjEl = document.getElementById(base + 'cnpj-fornecedor');
+                    if(window.formatCpfCnpj && cnpjEl) cnpjEl.value = formatCpfCnpj(cnpjEl.value || '');
+                }catch(e){}
+            }, 60);
+            setIf(base + 'razao_social', 'razao_social', data.razao_social || '');
+            setIf(base + 'nome_fantasia', 'nome_fantasia', data.nome_fantasia || '');
+            setIf(base + 'rua', 'rua', (data.descricao_tipo_de_logradouro || data.descricao_tipo_logradouro || '') + ' ' + (data.logradouro || ''));
+            setIf(base + 'numero', 'numero', data.numero || '');
+            setIf(base + 'complemento', 'complemento', data.complemento || '');
+            setIf(base + 'cep-fornecedor', 'cep', data.cep || '');
+            setIf(base + 'bairro', 'bairro', data.bairro || '');
+            setIf(base + 'cidade', 'cidade', data.municipio || '');
+            setIf(base + 'estado', 'estado', data.uf || '');
+            setIf(base + 'telefone-fornecedor', 'telefone', data.ddd_telefone_1 || '');
+            setTimeout(()=>{
+                try{
+                    const cepEl = document.getElementById(base + 'cep-fornecedor');
+                    const phoneEl = document.getElementById(base + 'telefone-fornecedor');
+                    if(window.formatCEP && cepEl) cepEl.value = formatCEP(cepEl.value || '');
+                    if(window.formatPhone && phoneEl) phoneEl.value = formatPhone(phoneEl.value || '');
+                }catch(e){  }
+            }, 100);
+        }catch(e){ alert('Erro ao buscar CNPJ: '+e.message); }
+    }
+    const btnBuscar = document.getElementById('buscar-cnpj-fornecedor');
+    if (btnBuscar) btnBuscar.addEventListener('click', ()=> buscarCnpj('cnpj-fornecedor'));
+    const btnBuscarEdit = document.getElementById('buscar-cnpj-edit-fornecedor');
+    if (btnBuscarEdit) btnBuscarEdit.addEventListener('click', ()=> buscarCnpj('edit-cnpj-fornecedor','edit'));
+    </script>
+{% endblock %}

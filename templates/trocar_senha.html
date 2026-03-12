@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1 class="my-4">Trocar Senha</h1>
+    <form method="POST" class="row g-3">
+        <div class="col-12 col-md-6">
+            <input type="password" class="form-control" name="nova_senha" placeholder="Nova Senha" required>
+        </div>
+        <div class="col-12 col-md-6">
+            <input type="password" class="form-control" name="confirmar_senha" placeholder="Confirmar Nova Senha" required>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Salvar Nova Senha</button>
+        </div>
+    </form>
+{% endblock %}

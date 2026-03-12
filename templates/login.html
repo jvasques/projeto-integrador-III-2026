@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="login-container" style="background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width:100%; max-width:400px;">
+        <div class="text-center mb-3">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logotipo da empresa" style="height: 64px; width: auto; max-width: 200px; object-fit: contain;">
+        </div>
+        <h2 class="text-center mb-4">Login</h2>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="username" class="form-label">Usuário</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Senha</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Entrar</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

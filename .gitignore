@@ -1,0 +1,53 @@
+# ===== Ambiente e Segredos =====
+.env
+.venv/
+venv/
+env/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ===== IDE / Editor =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.qodo/
+.quodo/
+
+# ===== Sistema Operacional =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ===== Logs e temporários =====
+*.log
+*.csv
+
+# ===== Git antigo =====
+.git_OLD/
+
+# ===== Arquivos de backup / migração (não necessários no repo) =====
+app_supabase_backup.py
+app_temp.py
+backup_supabase.json
+migrate_data.py
+fix_fstrings.py
+rotas_restantes.py
+
+# ===== Arquivos de teste local =====
+test_connection.py
+test_reportlab.py
+test_simple.py
+
+# ===== Docs de migração (específicos do processo, não do projeto) =====
+README_MIGRACAO_NEON.md
+STATUS_MIGRACAO.md
+docs/MIGRACAO_NEON.md
