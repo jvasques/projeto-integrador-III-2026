@@ -812,6 +812,35 @@ html.a11y-high-contrast .a11y-toggle,
 .help-toggle:focus { outline: 3px solid #9ec5fe; outline-offset: 2px; }
 @media (max-width: 767.98px){ .help-toggle { top: 12px; right: 12px; } }
 
+.logout-toggle {
+    position: fixed;
+    left: 16px;
+    top: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: #dc3545;
+    color: #fff;
+    font-weight: 800;
+    font-size: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    box-shadow: 0 8px 20px rgba(220,53,69,0.30);
+    z-index: 1200;
+}
+.logout-toggle:hover { filter: brightness(0.95); color: #fff; }
+.logout-toggle:focus { outline: 3px solid #f1aeb5; outline-offset: 2px; color: #fff; }
+@media (max-width: 767.98px){ .logout-toggle { top: 12px; left: 12px; } }
+
+.a11y-high-contrast .logout-toggle {
+    background: #111 !important;
+    color: #fff !important;
+    border: 2px solid var(--a11y-accent) !important;
+}
+
 .tour-overlay {
     position: fixed;
     inset: 0;

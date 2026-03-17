@@ -132,6 +132,13 @@
                 Aa
             </button>
 
+            <!-- Botão flutuante de sair -->
+            {% if not request.path.startswith('/login') and session.user %}
+            <a id="logout-toggle" class="logout-toggle" href="{{ url_for('logout') }}" aria-label="Sair do sistema" title="Sair">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            </a>
+            {% endif %}
+
             <!-- Botão flutuante do guia operacional -->
             {% if not request.path.startswith('/login') and session.user %}
             <button id="help-toggle" class="help-toggle" type="button" aria-label="Abrir guia operacional" title="Ajuda (guia da página)">?</button>
@@ -141,10 +148,15 @@
             <nav class="mobile-bottom-nav d-md-none fixed-bottom bg-light border-top">
                 <div class="container d-flex justify-content-around py-1">
                     {# Mobile produtos submenu (collapse) - appears above the nav when toggled #}
-                    <div class="mobile-submenu collapse" id="mobileProdutosCollapse">
+                    <div class="mobile-submenu collapse" id="mobileProdutosCollapse" data-bs-parent=".mobile-bottom-nav .container">
                         <a class="mobile-submenu-item {% if request.path.startswith('/produtos') %}active-sub{% endif %}" href="{{ url_for('produtos') }}">Produtos</a>
                         <a class="mobile-submenu-item {% if request.path.startswith('/locais') %}active-sub{% endif %}" href="{{ url_for('locais') }}">Locais</a>
                         <a class="mobile-submenu-item {% if request.path.startswith('/movimentacoes') %}active-sub{% endif %}" href="{{ url_for('movimentacoes') }}">Movimentações</a>
+                    </div>
+                    {# Mobile dados submenu (collapse) - Dashboard e Análise Preditiva #}
+                    <div class="mobile-submenu collapse" id="mobileDadosCollapse" data-bs-parent=".mobile-bottom-nav .container">
+                        <a class="mobile-submenu-item {% if request.path == '/dashboard' %}active-sub{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
+                        <a class="mobile-submenu-item {% if request.path.startswith('/dashboard/reposicoes') %}active-sub{% endif %}" href="{{ url_for('dashboard_reposicoes') }}">Análise Preditiva</a>
                     </div>
                     {% if session.user.role == 'admin' %}
                         <a class="nav-icon {% if request.path.startswith('/empresa') %}active-nav{% endif %}" href="{{ url_for('empresa') }}" title="Empresa">
@@ -184,19 +196,13 @@
                                 <small>Estoque</small>
                             </div>
                         </a>
-                        <a class="nav-icon {% if request.path.startswith('/dashboard') %}active-nav{% endif %}" href="{{ url_for('dashboard') }}" title="Dashboard">
+                        <a class="nav-icon {% if request.path.startswith('/dashboard') %}active-nav{% endif %}" href="#mobileDadosCollapse" data-bs-toggle="collapse" role="button" aria-expanded="{{ 'true' if request.path.startswith('/dashboard') else 'false' }}" aria-controls="mobileDadosCollapse" title="Dados">
                             <div class="d-flex flex-column align-items-center">
-                                <i class="bi bi-graph-up" aria-hidden="true"></i>
-                                <small>Dashboard</small>
+                                <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                                <small>Dados</small>
                             </div>
                         </a>
                     {% endif %}
-                    <a class="nav-icon text-danger {% if request.path.startswith('/logout') %}active-nav{% endif %}" href="{{ url_for('logout') }}" title="Sair">
-                        <div class="d-flex flex-column align-items-center">
-                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                            <small>Sair</small>
-                        </div>
-                    </a>
                 </div>
             </nav>
             {% endif %}

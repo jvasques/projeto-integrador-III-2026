@@ -537,6 +537,19 @@ document.addEventListener('DOMContentLoaded', function(){
                 { sel: 'form, .card, .container', title: 'Filtros e Lançamentos', text: 'Defina filtros para visualizar as movimentações.' },
                 { sel: 'table.table', title: 'Histórico', text: 'Acompanhe as movimentações realizadas.' }
             ],
+            '/dashboard/reposicoes': [
+                { sel: 'h1, h2', title: 'Análise Preditiva', text: 'Veja recomendações de reposição com base no histórico e no estoque mínimo.' },
+                { sel: '#periodo', title: 'Janela Histórica', text: 'Ajuste o período para recalcular as métricas preditivas.' },
+                { sel: '.card .table, table.table', title: 'Sugestão de Compra', text: 'Confira saldo atual, estoque ideal e sugestão de compra por produto.' },
+                { sel: 'a[aria-controls="mobileDadosCollapse"], a[href="/dashboard/reposicoes"]', title: 'Botão Dados', text: 'No mobile, use o botão Dados para abrir Dashboard e Análise Preditiva.' }
+            ],
+            '/dashboard': [
+                { sel: 'h1, h2', title: 'Dashboard', text: 'Acompanhe indicadores, gráficos e rankings de movimentação.' },
+                { sel: '#periodo', title: 'Filtro de Período', text: 'Selecione a janela de análise para atualizar os números.' },
+                { sel: '#chartMovimentacaoMensal, #chartMovimentacaoLocal', title: 'Gráficos', text: 'Visualize tendência de entradas/saídas e distribuição por local.' },
+                { sel: 'table.table', title: 'Rankings', text: 'Consulte os principais produtos, clientes, fornecedores e saldos.' },
+                { sel: 'a[aria-controls="mobileDadosCollapse"], a[href="/dashboard"]', title: 'Botão Dados', text: 'No mobile, use o botão Dados para navegar entre Dashboard e Análise Preditiva.' }
+            ],
             '/usuarios': [
                 { sel: '.add-usuario', title: 'Adicionar Usuário', text: 'Cadastre novos usuários do sistema.' },
                 { sel: 'table.table', title: 'Usuários', text: 'Edite, redefina senha ou exclua usuários.' }
