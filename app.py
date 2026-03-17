@@ -39,20 +39,29 @@ if os.getenv("VERCEL") or os.getenv("FLASK_ENV") == "production":
 
 # Configuração do banco de dados Neon
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL não configurada. Configure a variável de ambiente com a string de conexão do Neon.")
+engine = None
+SessionLocal = None
+DB_BOOT_ERROR = None
 
-# Para ambientes serverless como Vercel, use NullPool
-if os.getenv("VERCEL"):
-    engine = create_engine(DATABASE_URL, poolclass=NullPool, future=True)
-else:
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5, max_overflow=10, future=True)
+try:
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL não configurada. Defina a variável de ambiente na Vercel.")
 
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+    # Para ambientes serverless como Vercel, use NullPool
+    if os.getenv("VERCEL"):
+        engine = create_engine(DATABASE_URL, poolclass=NullPool, future=True)
+    else:
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5, max_overflow=10, future=True)
+
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+except Exception as db_init_error:
+    DB_BOOT_ERROR = str(db_init_error)
 
 @app.before_request
 def open_session():
     """Abre sessão do banco antes de cada request"""
+    if SessionLocal is None:
+        return jsonify({'error': 'Configuração de banco inválida no servidor.', 'detail': DB_BOOT_ERROR}), 500
     g.db = SessionLocal()
 
 @app.teardown_request
