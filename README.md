@@ -1,6 +1,6 @@
 # 📦 Sistema de Gestão de Estoque
 
-Sistema web de gestão de estoque desenvolvido como **Projeto Integrador II** do curso de Computação — UNIVESP 2025.
+Sistema web de gestão de estoque desenvolvido como **Projeto Integrador III** do curso de Computação — UNIVESP 2026.
 
 Permite o cadastro e controle de **produtos, fornecedores, clientes, locais de estoque e movimentações** (entradas, saídas e transferências), com geração de relatórios em PDF e Excel.
 
@@ -17,6 +17,7 @@ Permite o cadastro e controle de **produtos, fornecedores, clientes, locais de e
 - **Acessibilidade**: Alto contraste, aumento de fonte, navegação por teclado, VLibras (Libras) e guia operacional interativo
 - **Responsivo**: Layout adaptado para desktop e dispositivos móveis
 - **Busca automática**: CEP (ViaCEP) e CNPJ (BrasilAPI) nos formulários
+- **Analise de Dados**: Dashboard e Analise Preditiva de Reposição
 
 ---
 
@@ -37,8 +38,8 @@ Permite o cadastro e controle de **produtos, fornecedores, clientes, locais de e
 
 ### 1. Clonar o repositório
 ```bash
-git clone https://github.com/seu-usuario/seu-repositorio.git
-cd seu-repositorio
+git clone https://github.com/jvasques/projeto-integrador-III-2026
+cd projeto-integrador-III-2026
 ```
 
 ### 2. Criar e ativar ambiente virtual
@@ -81,8 +82,6 @@ Acesse em: [http://localhost:5000](http://localhost:5000)
 |---|---|
 | `admin` | `admin` |
 
-> ⚠️ **Altere a senha padrão do admin após o primeiro acesso.**
-
 ---
 
 ## 📁 Estrutura do projeto
@@ -121,12 +120,6 @@ O sistema segue diretrizes da **WCAG 2.1**, **eMAG** e legislação brasileira (
 
 ---
 
-## 📚 Documentação complementar
-
-- [`docs/ANALISE_DE_DADOS_PROPOSTAS.md`](docs/ANALISE_DE_DADOS_PROPOSTAS.md) — sugestões de implementações alternativas para atender a demanda de Análise de Dados
-
----
-
 ## 📄 Licença
 
-Projeto acadêmico desenvolvido para fins educacionais — UNIVESP 2025.
+Projeto acadêmico desenvolvido para fins educacionais — UNIVESP 2026.

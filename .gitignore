@@ -50,4 +50,4 @@ test_simple.py
 # ===== Docs de migração (específicos do processo, não do projeto) =====
 README_MIGRACAO_NEON.md
 STATUS_MIGRACAO.md
-docs/MIGRACAO_NEON.md
+docs/*.md
