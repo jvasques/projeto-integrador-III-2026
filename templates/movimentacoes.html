@@ -66,7 +66,10 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-12"><label>Quantidade</label><input type="number" name="quantidade" class="form-control"
+            <div class="col-12">
+                <small id="transfer-estoque-info" class="text-muted">Estoque disponível na origem: 0</small>
+            </div>
+            <div class="col-12"><label>Quantidade</label><input type="number" id="transfer-quantidade" name="quantidade" class="form-control"
                     min="1" required></div>
             <div class="col-12"><button class="btn btn-primary">Transferir</button></div>
         </form>
@@ -276,12 +279,75 @@
         }
     }
 
+    function atualizarTransferenciaComEstoque() {
+        const produtoSel = document.getElementById('transfer-produto');
+        const origemSel = document.getElementById('transfer-local-from');
+        const destinoSel = document.getElementById('transfer-local-to');
+        const qtdInput = document.getElementById('transfer-quantidade');
+        const infoEl = document.getElementById('transfer-estoque-info');
+        const mapEl = document.getElementById('mov-produtos-estoque-map');
+        const locaisEl = document.getElementById('mov-locais-nomes');
+        if (!produtoSel || !origemSel || !destinoSel || !qtdInput || !infoEl || !mapEl || !locaisEl) return;
+
+        const estoqueMap = JSON.parse(mapEl.textContent || '{}');
+        const locaisNomes = JSON.parse(locaisEl.textContent || '[]');
+        const produtoId = String(produtoSel.value || '');
+        const estoquePorLocal = estoqueMap[produtoId] || {};
+        const origemAtual = origemSel.value;
+        const destinoAtual = destinoSel.value;
+
+        origemSel.innerHTML = '';
+        destinoSel.innerHTML = '';
+
+        locaisNomes.forEach(function(nomeLocal) {
+            const qtd = Number(estoquePorLocal[nomeLocal] || 0);
+
+            const optOrigem = document.createElement('option');
+            optOrigem.value = nomeLocal;
+            optOrigem.textContent = `${nomeLocal} (${qtd})`;
+            origemSel.appendChild(optOrigem);
+
+            const optDestino = document.createElement('option');
+            optDestino.value = nomeLocal;
+            optDestino.textContent = `${nomeLocal} (${qtd})`;
+            destinoSel.appendChild(optDestino);
+        });
+
+        if (origemAtual && Array.from(origemSel.options).some(function(o) { return o.value === origemAtual; })) {
+            origemSel.value = origemAtual;
+        }
+        if (destinoAtual && Array.from(destinoSel.options).some(function(o) { return o.value === destinoAtual; })) {
+            destinoSel.value = destinoAtual;
+        }
+
+        const origemSelecionada = origemSel.value || '';
+        const disponivel = Number(estoquePorLocal[origemSelecionada] || 0);
+        infoEl.textContent = `Estoque disponível na origem: ${disponivel}`;
+        qtdInput.max = String(Math.max(0, disponivel));
+
+        const valorAtual = parseInt(qtdInput.value || '0', 10);
+        if (valorAtual > disponivel) {
+            qtdInput.value = disponivel > 0 ? String(disponivel) : '';
+        }
+    }
+
     window.addEventListener('DOMContentLoaded', function () {
         toggleParceiroField();
         atualizarLocaisComEstoque();
+        atualizarTransferenciaComEstoque();
+
         const produtoSel = document.getElementById('mov-produto-id');
         if (produtoSel) {
             produtoSel.addEventListener('change', atualizarLocaisComEstoque);
+        }
+
+        const transferProduto = document.getElementById('transfer-produto');
+        const transferOrigem = document.getElementById('transfer-local-from');
+        if (transferProduto) {
+            transferProduto.addEventListener('change', atualizarTransferenciaComEstoque);
+        }
+        if (transferOrigem) {
+            transferOrigem.addEventListener('change', atualizarTransferenciaComEstoque);
         }
     });
 

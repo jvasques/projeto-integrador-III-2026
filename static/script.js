@@ -463,7 +463,9 @@ document.addEventListener('DOMContentLoaded', function(){
         transferForm.addEventListener('submit', function(e){
             const from = document.getElementById('transfer-local-from').value;
             const to = document.getElementById('transfer-local-to').value;
-            const qty = parseInt(transferForm.querySelector('input[name="quantidade"]').value || '0', 10);
+            const qtyInput = transferForm.querySelector('input[name="quantidade"]');
+            const qty = parseInt((qtyInput && qtyInput.value) || '0', 10);
+            const maxDisponivel = parseInt((qtyInput && qtyInput.max) || '0', 10);
             if(from === to){
                 e.preventDefault();
                 alert('Escolha estoques diferentes para origem e destino.');
@@ -472,6 +474,11 @@ document.addEventListener('DOMContentLoaded', function(){
             if(!qty || qty <= 0){
                 e.preventDefault();
                 alert('Informe uma quantidade válida (>0).');
+                return false;
+            }
+            if(Number.isFinite(maxDisponivel) && maxDisponivel >= 0 && qty > maxDisponivel){
+                e.preventDefault();
+                alert(`Quantidade indisponível. Estoque na origem: ${maxDisponivel}.`);
                 return false;
             }
             return true;
