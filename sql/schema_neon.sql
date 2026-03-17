@@ -68,7 +68,9 @@ CREATE TABLE IF NOT EXISTS produto (
   id SERIAL PRIMARY KEY,
   descricao TEXT NOT NULL,
   quantidade INTEGER,
-  local TEXT
+  local TEXT,
+  estoque_minimo INTEGER,
+  estoque_maximo INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_produto_desc ON produto (descricao);
 CREATE INDEX IF NOT EXISTS idx_produto_local ON produto (local);

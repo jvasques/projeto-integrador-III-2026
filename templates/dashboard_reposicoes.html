@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="my-4">Análise Preditiva de Reposição</h1>
+
+<div class="row mb-4 g-3">
+    <div class="col-12 col-md-8">
+        <form method="GET" class="d-flex align-items-end gap-2 flex-wrap">
+            <div>
+                <label for="periodo" class="form-label">Janela histórica:</label>
+                <select name="periodo" id="periodo" class="form-select">
+                    <option value="30" {% if periodo == 30 %}selected{% endif %}>30 dias</option>
+                    <option value="60" {% if periodo == 60 %}selected{% endif %}>60 dias</option>
+                    <option value="90" {% if periodo == 90 %}selected{% endif %}>90 dias</option>
+                    <option value="180" {% if periodo == 180 %}selected{% endif %}>180 dias</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Recalcular</button>
+        </form>
+    </div>
+    <div class="col-12 col-md-4">
+        {% if not possui_colunas_planejamento %}
+        <div class="alert alert-warning mb-0 p-2">
+            Campo `estoque_minimo` não encontrado na base atual. Usando estimativa automática.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-4 g-3">
+    <div class="col-6 col-md-3">
+        <div class="card border-dark">
+            <div class="card-body text-center">
+                <div class="text-muted small">Produtos analisados</div>
+                <div class="h3 mb-0">{{ resumo.total }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <div class="text-danger small">Críticos</div>
+                <div class="h3 mb-0 text-danger">{{ resumo.criticos }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <div class="text-warning small">Atenção</div>
+                <div class="h3 mb-0 text-warning">{{ resumo.atencao }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <div class="text-success small">OK</div>
+                <div class="h3 mb-0 text-success">{{ resumo.ok }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        Recomendação de compra por produto
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Produto</th>
+                        <th class="text-end">Saldo</th>
+                        <th class="text-end">Estoque mínimo</th>
+                        <th class="text-end">Estoque ideal (+20%)</th>
+                        <th class="text-end">Sugestão de compra</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if itens %}
+                        {% for item in itens %}
+                        <tr>
+                            <td>{{ item.descricao }}</td>
+                            <td class="text-end fw-bold">{{ item.saldo_atual }}</td>
+                            <td class="text-end">{{ item.ponto_reposicao }}</td>
+                            <td class="text-end">{{ item.alvo_estoque }}</td>
+                            <td class="text-end fw-bold">{{ item.sugestao_compra }}</td>
+                            <td>
+                                {% if item.criticidade == 'critico' %}
+                                    <span class="badge bg-danger">Crítico</span>
+                                {% elif item.criticidade == 'atencao' %}
+                                    <span class="badge bg-warning text-dark">Atenção</span>
+                                {% else %}
+                                    <span class="badge bg-success">OK</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">Sem dados para análise preditiva.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

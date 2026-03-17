@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 import os
+from analytics.predictor import calcular_metricas_reposicao
 
 load_dotenv()
 
@@ -575,6 +576,19 @@ def produtos():
     if request.method == 'POST':
         try:
             descricao = request.form['descricao']
+            estoque_minimo_raw = request.form.get('estoque_minimo')
+
+            def _parse_planejamento(valor):
+                if valor is None:
+                    return None
+                valor_limpo = str(valor).strip()
+                if valor_limpo == '':
+                    return None
+                numero = int(valor_limpo)
+                return max(0, numero)
+
+            estoque_minimo = _parse_planejamento(estoque_minimo_raw)
+            possui_colunas_planejamento = _produto_tem_colunas_planejamento()
             
             if 'id' in request.form and request.form['id']:
                 # Atualizar produto existente
@@ -584,14 +598,35 @@ def produtos():
                 if row:
                     old_desc = row['descricao']
                     # Atualiza todos os produtos com a mesma descrição
-                    g.db.execute(text("""
-                        UPDATE produto SET descricao = :new_desc WHERE descricao = :old_desc
-                    """), {"new_desc": descricao, "old_desc": old_desc})
+                    if possui_colunas_planejamento:
+                        g.db.execute(text("""
+                            UPDATE produto
+                            SET descricao = :new_desc,
+                                estoque_minimo = :estoque_minimo
+                            WHERE descricao = :old_desc
+                        """), {
+                            "new_desc": descricao,
+                            "old_desc": old_desc,
+                            "estoque_minimo": estoque_minimo
+                        })
+                    else:
+                        g.db.execute(text("""
+                            UPDATE produto SET descricao = :new_desc WHERE descricao = :old_desc
+                        """), {"new_desc": descricao, "old_desc": old_desc})
             else:
                 # Inserir novo produto
-                g.db.execute(text("""
-                    INSERT INTO produto (descricao, quantidade, local) VALUES (:descricao, 0, '')
-                """), {"descricao": descricao})
+                if possui_colunas_planejamento:
+                    g.db.execute(text("""
+                        INSERT INTO produto (descricao, quantidade, local, estoque_minimo)
+                        VALUES (:descricao, 0, '', :estoque_minimo)
+                    """), {
+                        "descricao": descricao,
+                        "estoque_minimo": estoque_minimo
+                    })
+                else:
+                    g.db.execute(text("""
+                        INSERT INTO produto (descricao, quantidade, local) VALUES (:descricao, 0, '')
+                    """), {"descricao": descricao})
             
             g.db.commit()
             flash('Produto salvo com sucesso!', 'success')
@@ -601,9 +636,17 @@ def produtos():
         return redirect(url_for('produtos'))
     
     try:
-        rows = g.db.execute(text("""
-            SELECT id, descricao, quantidade, local FROM produto ORDER BY id ASC
-        """)).mappings().all()
+        possui_colunas_planejamento = _produto_tem_colunas_planejamento()
+        if possui_colunas_planejamento:
+            rows = g.db.execute(text("""
+                SELECT id, descricao, quantidade, local, estoque_minimo
+                FROM produto ORDER BY id ASC
+            """)).mappings().all()
+        else:
+            rows = g.db.execute(text("""
+                SELECT id, descricao, quantidade, local
+                FROM produto ORDER BY id ASC
+            """)).mappings().all()
         
         # Agrupa produtos por descrição
         produtos_map = {}
@@ -615,6 +658,7 @@ def produtos():
                     'id': r.get('id'),
                     'descricao': r.get('descricao'),
                     'total': 0,
+                    'estoque_minimo': None,
                 }
             qty = r.get('quantidade') or 0
             try:
@@ -622,6 +666,12 @@ def produtos():
             except Exception:
                 qty = 0
             produtos_map[key]['total'] += qty
+            if possui_colunas_planejamento:
+                if produtos_map[key]['estoque_minimo'] is None and r.get('estoque_minimo') is not None:
+                    try:
+                        produtos_map[key]['estoque_minimo'] = int(r.get('estoque_minimo'))
+                    except Exception:
+                        produtos_map[key]['estoque_minimo'] = None
 
         produtos_agg = list(produtos_map.values())
     except Exception as e:
@@ -717,9 +767,16 @@ def get_produto(id):
         return jsonify({'error': 'Acesso restrito a usuários normais.'}), 403
     
     try:
-        row = g.db.execute(text("""
-            SELECT id, descricao, quantidade, local FROM produto WHERE id = :id
-        """), {"id": id}).mappings().first()
+        if _produto_tem_colunas_planejamento():
+            row = g.db.execute(text("""
+                SELECT id, descricao, quantidade, local, estoque_minimo
+                FROM produto WHERE id = :id
+            """), {"id": id}).mappings().first()
+        else:
+            row = g.db.execute(text("""
+                SELECT id, descricao, quantidade, local
+                FROM produto WHERE id = :id
+            """), {"id": id}).mappings().first()
         
         if not row:
             return jsonify({'error': 'Produto não encontrado'}), 404
@@ -727,6 +784,8 @@ def get_produto(id):
         produto = dict(row)
         if 'local' not in produto or produto['local'] is None:
             produto['local'] = ''
+        if 'estoque_minimo' not in produto:
+            produto['estoque_minimo'] = None
         
         return jsonify(produto)
     except Exception as e:
@@ -1038,18 +1097,51 @@ def movimentacoes():
         
         # Produtos únicos para o select
         prod_rows = g.db.execute(text("""
-            SELECT DISTINCT ON (descricao) id, descricao FROM produto 
+            SELECT
+                MIN(id) AS id,
+                descricao
+            FROM produto
             WHERE descricao IS NOT NULL AND descricao != ''
-            ORDER BY descricao, id ASC
+            GROUP BY descricao
+            ORDER BY descricao ASC
         """)).mappings().all()
+
+        # Mapa de estoque por descrição/local para exibir no select de locais
+        estoque_rows = g.db.execute(text("""
+            SELECT
+                descricao,
+                TRIM(local) AS local,
+                SUM(COALESCE(quantidade, 0)) AS quantidade
+            FROM produto
+            WHERE descricao IS NOT NULL
+              AND descricao != ''
+              AND COALESCE(TRIM(local), '') != ''
+            GROUP BY descricao, TRIM(local)
+        """)).mappings().all()
+
+        estoque_por_descricao = {}
+        for row in estoque_rows:
+            item = dict(row)
+            descricao = item.get('descricao')
+            local = item.get('local')
+            if not descricao or not local:
+                continue
+            if descricao not in estoque_por_descricao:
+                estoque_por_descricao[descricao] = {}
+            try:
+                estoque_por_descricao[descricao][local] = int(item.get('quantidade') or 0)
+            except Exception:
+                estoque_por_descricao[descricao][local] = 0
         
         produtos_list = []
+        produtos_estoque_map = {}
         for row in prod_rows:
             produto = dict(row)
             if produto.get('descricao'):  # Só adiciona se tem descrição
                 # Adiciona sample_id para compatibilidade com o template
                 produto['sample_id'] = produto['id']
                 produtos_list.append(produto)
+            produtos_estoque_map[str(produto['sample_id'])] = estoque_por_descricao.get(produto['descricao'], {})
         
         fornecedores_rows = g.db.execute(text("SELECT id, nome_fantasia FROM fornecedor WHERE ativo = TRUE")).mappings().all()
         fornecedores = [dict(row) for row in fornecedores_rows]
@@ -1062,6 +1154,7 @@ def movimentacoes():
         movimentacoes_data = []
         locais_data = []
         produtos_list = []
+        produtos_estoque_map = {}
         fornecedores = []
         clientes = []
     
@@ -1069,6 +1162,7 @@ def movimentacoes():
                          movimentacoes=movimentacoes_data, 
                          locais=locais_data, 
                          produtos_list=produtos_list, 
+                         produtos_estoque_map=produtos_estoque_map,
                          fornecedores=fornecedores, 
                          clientes=clientes, 
                          filter_tipo=filter_tipo, 
@@ -1868,6 +1962,375 @@ def movimentacoes_reverter():
         flash('Erro ao registrar reversão: {}'.format(str(e)), 'error')
 
     return redirect(url_for('movimentacoes'))
+
+# ════════════════════════════════════════════════════════════════
+# ALTERNATIVA 1: DASHBOARD DE ANÁLISE DE DADOS
+# ════════════════════════════════════════════════════════════════
+
+@app.route('/dashboard', methods=['GET'])
+@login_required
+def dashboard():
+    """Dashboard com indicadores KPI e gráficos analíticos"""
+    if session['user']['role'] == 'admin':
+        flash('Acesso restrito a usuários normais.', 'error')
+        return redirect(url_for('usuarios'))
+    
+    try:
+        periodo_dias = int(request.args.get('periodo', 30))
+    except:
+        periodo_dias = 30
+    
+    try:
+        # KPI 1: Total de entradas (últimos N dias)
+        total_entradas = g.db.execute(text("""
+            SELECT COUNT(*) as qtd FROM movimentacao 
+            WHERE tipo = 'entrada' 
+            AND created_at >= now() - INTERVAL '{}' day
+        """.format(periodo_dias))).mappings().first()
+        total_entradas = int(total_entradas['qtd'] or 0) if total_entradas else 0
+        
+        # KPI 2: Total de saídas (últimos N dias)
+        total_saidas = g.db.execute(text("""
+            SELECT COUNT(*) as qtd FROM movimentacao 
+            WHERE tipo = 'saida' 
+            AND created_at >= now() - INTERVAL '{}' day
+        """.format(periodo_dias))).mappings().first()
+        total_saidas = int(total_saidas['qtd'] or 0) if total_saidas else 0
+        
+        # KPI 3: Movimentação por período (últimos 12 meses)
+        movimentacao_mensal = g.db.execute(text("""
+            SELECT 
+                DATE_TRUNC('month', created_at)::DATE as mes,
+                tipo,
+                COUNT(*) as qtd
+            FROM movimentacao
+            WHERE created_at >= now() - INTERVAL '12' month
+            GROUP BY DATE_TRUNC('month', created_at), tipo
+            ORDER BY mes DESC
+        """)).mappings().all()
+        
+        movimentacao_chart = {}
+        for row in movimentacao_mensal:
+            mes = row['mes'].strftime('%b/%Y') if row['mes'] else 'N/A'
+            tipo = row['tipo']
+            qtd = int(row['qtd'] or 0)
+            if mes not in movimentacao_chart:
+                movimentacao_chart[mes] = {'entrada': 0, 'saida': 0}
+            movimentacao_chart[mes][tipo] = qtd
+        
+        # KPI 4: Top 10 produtos com maior saída (últimos N dias)
+        top_produtos_saida = g.db.execute(text("""
+            SELECT 
+                produto_descricao,
+                SUM(quantidade) as total_saida
+            FROM movimentacao
+            WHERE tipo = 'saida' 
+            AND parceiro_tipo != 'transferencia'
+            AND created_at >= now() - INTERVAL '{}' day
+            GROUP BY produto_descricao
+            ORDER BY total_saida DESC
+            LIMIT 10
+        """.format(periodo_dias))).mappings().all()
+        top_produtos_saida = [dict(row) for row in top_produtos_saida]
+        
+        # KPI 5: Top 10 fornecedores por volume de entrada (últimos N dias)
+        top_fornecedores = g.db.execute(text("""
+            SELECT 
+                COALESCE(f.nome_fantasia, 'Desconhecido') as fornecedor,
+                SUM(m.quantidade) as total_entrada
+            FROM movimentacao m
+            LEFT JOIN fornecedor f ON m.parceiro_id = f.id
+            WHERE m.tipo = 'entrada' 
+            AND m.parceiro_tipo = 'fornecedor'
+            AND m.created_at >= now() - INTERVAL '{}' day
+            GROUP BY f.nome_fantasia
+            ORDER BY total_entrada DESC
+            LIMIT 10
+        """.format(periodo_dias))).mappings().all()
+        top_fornecedores = [dict(row) for row in top_fornecedores]
+        
+        # KPI 6: Top 10 clientes por volume de saída (últimos N dias)
+        top_clientes = g.db.execute(text("""
+            SELECT 
+                COALESCE(c.nome, 'Desconhecido') as cliente,
+                SUM(m.quantidade) as total_saida
+            FROM movimentacao m
+            LEFT JOIN cliente c ON m.parceiro_id = c.id
+            WHERE m.tipo = 'saida' 
+            AND m.parceiro_tipo = 'cliente'
+            AND m.created_at >= now() - INTERVAL '{}' day
+            GROUP BY c.nome
+            ORDER BY total_saida DESC
+            LIMIT 10
+        """.format(periodo_dias))).mappings().all()
+        top_clientes = [dict(row) for row in top_clientes]
+        
+        # KPI 7: Movimentação por local (últimos N dias)
+        movimentacao_por_local = g.db.execute(text("""
+            SELECT 
+                local,
+                COUNT(*) as total
+            FROM movimentacao
+            WHERE created_at >= now() - INTERVAL '{}' day
+            GROUP BY local
+            ORDER BY total DESC
+        """.format(periodo_dias))).mappings().all()
+        movimentacao_por_local = [dict(row) for row in movimentacao_por_local]
+        
+        # KPI 8: Saldo atual por produto
+        saldo_produtos = g.db.execute(text("""
+            SELECT
+                p.descricao,
+                SUM(p.quantidade) as saldo_total,
+                COUNT(DISTINCT CASE
+                    WHEN COALESCE(TRIM(p.local), '') != '' AND COALESCE(p.quantidade, 0) > 0
+                    THEN TRIM(p.local)
+                    ELSE NULL
+                END) as locais,
+                COALESCE(m.entrada_qtd, 0) AS entrada_qtd,
+                COALESCE(m.saida_qtd, 0) AS saida_qtd,
+                CASE
+                    WHEN COALESCE(m.saida_qtd, 0) > 0
+                    THEN ROUND((COALESCE(m.entrada_qtd, 0)::numeric / COALESCE(m.saida_qtd, 0)::numeric), 2)
+                    ELSE NULL
+                END AS relacao_entrada_saida
+            FROM produto p
+            LEFT JOIN (
+                SELECT
+                    produto_descricao,
+                    COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN quantidade ELSE 0 END), 0) AS entrada_qtd,
+                    COALESCE(SUM(CASE WHEN tipo = 'saida' THEN quantidade ELSE 0 END), 0) AS saida_qtd
+                FROM movimentacao
+                WHERE parceiro_tipo != 'transferencia'
+                  AND created_at >= now() - INTERVAL '{}' day
+                GROUP BY produto_descricao
+            ) m ON m.produto_descricao = p.descricao
+            WHERE p.descricao IS NOT NULL AND p.descricao != ''
+            GROUP BY p.descricao, m.entrada_qtd, m.saida_qtd
+            ORDER BY saldo_total DESC
+            LIMIT 20
+        """.format(periodo_dias))).mappings().all()
+        saldo_produtos = [dict(row) for row in saldo_produtos]
+        
+        dashboard_data = {
+            'total_entradas': total_entradas,
+            'total_saidas': total_saidas,
+            'movimentacao_mensal': movimentacao_chart,
+            'top_produtos_saida': top_produtos_saida,
+            'top_fornecedores': top_fornecedores,
+            'top_clientes': top_clientes,
+            'movimentacao_local': movimentacao_por_local,
+            'saldo_produtos': saldo_produtos,
+            'periodo': periodo_dias
+        }
+        
+    except Exception as e:
+        flash('Erro ao carregar dashboard: {}'.format(str(e)), 'error')
+        dashboard_data = {
+            'total_entradas': 0,
+            'total_saidas': 0,
+            'movimentacao_mensal': {},
+            'top_produtos_saida': [],
+            'top_fornecedores': [],
+            'top_clientes': [],
+            'movimentacao_local': [],
+            'saldo_produtos': [],
+            'periodo': periodo_dias
+        }
+    
+    return render_template('dashboard.html', data=dashboard_data)
+
+
+def _produto_tem_colunas_planejamento():
+    try:
+        row = g.db.execute(text("""
+            SELECT COUNT(*) AS total
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'produto'
+              AND column_name = 'estoque_minimo'
+        """)).mappings().first()
+        return bool(row and int(row.get('total') or 0) >= 1)
+    except Exception:
+        return False
+
+
+def _buscar_base_reposicao(periodo_dias, possui_colunas_planejamento):
+    if possui_colunas_planejamento:
+        query = text("""
+            SELECT
+                p.descricao,
+                p.saldo_atual,
+                p.estoque_minimo,
+                COALESCE(m.total_saida_periodo, 0) AS total_saida_periodo
+            FROM (
+                SELECT
+                    descricao,
+                    SUM(COALESCE(quantidade, 0)) AS saldo_atual,
+                    MAX(COALESCE(estoque_minimo, 0)) AS estoque_minimo
+                FROM produto
+                WHERE descricao IS NOT NULL AND descricao != ''
+                GROUP BY descricao
+            ) p
+            LEFT JOIN (
+                SELECT
+                    produto_descricao,
+                    COALESCE(SUM(quantidade), 0) AS total_saida_periodo
+                FROM movimentacao
+                WHERE tipo = 'saida'
+                  AND parceiro_tipo != 'transferencia'
+                  AND created_at >= now() - make_interval(days => :periodo)
+                GROUP BY produto_descricao
+            ) m ON m.produto_descricao = p.descricao
+            ORDER BY p.descricao ASC
+        """)
+    else:
+        query = text("""
+            SELECT
+                p.descricao,
+                p.saldo_atual,
+                0 AS estoque_minimo,
+                COALESCE(m.total_saida_periodo, 0) AS total_saida_periodo
+            FROM (
+                SELECT
+                    descricao,
+                    SUM(COALESCE(quantidade, 0)) AS saldo_atual
+                FROM produto
+                WHERE descricao IS NOT NULL AND descricao != ''
+                GROUP BY descricao
+            ) p
+            LEFT JOIN (
+                SELECT
+                    produto_descricao,
+                    COALESCE(SUM(quantidade), 0) AS total_saida_periodo
+                FROM movimentacao
+                WHERE tipo = 'saida'
+                  AND parceiro_tipo != 'transferencia'
+                  AND created_at >= now() - make_interval(days => :periodo)
+                GROUP BY produto_descricao
+            ) m ON m.produto_descricao = p.descricao
+            ORDER BY p.descricao ASC
+        """)
+
+    rows = g.db.execute(query, {'periodo': periodo_dias}).mappings().all()
+    return [dict(row) for row in rows]
+
+
+# ════════════════════════════════════════════════════════════════
+# ALTERNATIVA 6: ANÁLISE PREDITIVA (REPOSIÇÃO)
+# ════════════════════════════════════════════════════════════════
+
+@app.route('/dashboard/reposicoes', methods=['GET'])
+@login_required
+def dashboard_reposicoes():
+    if session['user']['role'] == 'admin':
+        flash('Acesso restrito a usuários normais.', 'error')
+        return redirect(url_for('usuarios'))
+
+    try:
+        periodo_dias = int(request.args.get('periodo', 60))
+    except Exception:
+        periodo_dias = 60
+
+    if periodo_dias not in (30, 60, 90, 180):
+        periodo_dias = 60
+
+    try:
+        possui_colunas_planejamento = _produto_tem_colunas_planejamento()
+        base = _buscar_base_reposicao(periodo_dias, possui_colunas_planejamento)
+
+        itens = []
+        for item in base:
+            metricas = calcular_metricas_reposicao(
+                saldo_atual=item.get('saldo_atual'),
+                total_saida_periodo=item.get('total_saida_periodo'),
+                dias_periodo=periodo_dias,
+                estoque_minimo=item.get('estoque_minimo'),
+            )
+
+            itens.append({
+                'descricao': item.get('descricao') or 'Sem descrição',
+                **metricas
+            })
+
+        itens_ordenados = sorted(
+            itens,
+            key=lambda entry: (
+                0 if entry['criticidade'] == 'critico' else (1 if entry['criticidade'] == 'atencao' else 2),
+                -entry['sugestao_compra'],
+                entry['descricao'].lower(),
+            )
+        )
+
+        resumo = {
+            'total': len(itens_ordenados),
+            'criticos': sum(1 for item in itens_ordenados if item['criticidade'] == 'critico'),
+            'atencao': sum(1 for item in itens_ordenados if item['criticidade'] == 'atencao'),
+            'ok': sum(1 for item in itens_ordenados if item['criticidade'] == 'ok'),
+        }
+
+        return render_template(
+            'dashboard_reposicoes.html',
+            itens=itens_ordenados,
+            resumo=resumo,
+            periodo=periodo_dias,
+            possui_colunas_planejamento=possui_colunas_planejamento,
+        )
+    except Exception as e:
+        flash('Erro ao gerar análise preditiva: {}'.format(str(e)), 'error')
+        return render_template(
+            'dashboard_reposicoes.html',
+            itens=[],
+            resumo={'total': 0, 'criticos': 0, 'atencao': 0, 'ok': 0},
+            periodo=periodo_dias,
+            possui_colunas_planejamento=False,
+        )
+
+
+@app.route('/api/predicao/<int:produto_id>', methods=['GET'])
+@login_required
+def api_predicao_produto(produto_id):
+    if session['user']['role'] == 'admin':
+        return jsonify({'error': 'Acesso restrito a usuários normais.'}), 403
+
+    try:
+        try:
+            periodo_dias = int(request.args.get('periodo', 60))
+        except Exception:
+            periodo_dias = 60
+
+        row = g.db.execute(
+            text("SELECT descricao FROM produto WHERE id = :id"),
+            {'id': produto_id}
+        ).mappings().first()
+
+        if not row:
+            return jsonify({'error': 'Produto não encontrado'}), 404
+
+        descricao = row.get('descricao')
+        possui_colunas_planejamento = _produto_tem_colunas_planejamento()
+        base = _buscar_base_reposicao(periodo_dias, possui_colunas_planejamento)
+        item = next((entry for entry in base if entry.get('descricao') == descricao), None)
+
+        if not item:
+            return jsonify({'error': 'Sem dados para previsão'}), 404
+
+        metricas = calcular_metricas_reposicao(
+            saldo_atual=item.get('saldo_atual'),
+            total_saida_periodo=item.get('total_saida_periodo'),
+            dias_periodo=periodo_dias,
+            estoque_minimo=item.get('estoque_minimo'),
+        )
+
+        return jsonify({
+            'produto_id': produto_id,
+            'descricao': descricao,
+            'periodo_dias': periodo_dias,
+            'usa_parametros_cadastrados': possui_colunas_planejamento,
+            **metricas
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)

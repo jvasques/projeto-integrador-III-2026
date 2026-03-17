@@ -365,6 +365,7 @@ function editProduto(id) {
             const data = payload;
             document.getElementById('edit-produto-id').value = data.id;
             document.getElementById('edit-descricao').value = data.descricao || '';
+            document.getElementById('edit-estoque-minimo').value = data.estoque_minimo ?? '';
             openModal('edit-produto-modal');
         })
         .catch(error => {

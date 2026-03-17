@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="my-4">Dashboard de Análise de Dados</h1>
+
+<!-- Seletor de período -->
+<div class="row mb-4">
+    <div class="col-12 col-md-6">
+        <form method="GET" class="d-flex align-items-end gap-2">
+            <div>
+                <label for="periodo" class="form-label">Período (dias):</label>
+                <select name="periodo" id="periodo" class="form-select">
+                    <option value="7" {% if data.periodo == 7 %}selected{% endif %}>Últimos 7 dias</option>
+                    <option value="30" {% if data.periodo == 30 %}selected{% endif %}>Últimos 30 dias</option>
+                    <option value="90" {% if data.periodo == 90 %}selected{% endif %}>Últimos 90 dias</option>
+                    <option value="365" {% if data.periodo == 365 %}selected{% endif %}>Último ano</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Atualizar</button>
+        </form>
+    </div>
+</div>
+
+<!-- KPIs Principal -->
+<div class="row mb-4">
+    <div class="col-12 col-md-6">
+        <div class="card bg-light border-success">
+            <div class="card-body">
+                <h5 class="card-title text-success">✓ Total de Entradas</h5>
+                <p class="card-text display-4 text-success fw-bold">{{ data.total_entradas }}</p>
+                <small class="text-muted">Últimos {{ data.periodo }} dias</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="card bg-light border-danger">
+            <div class="card-body">
+                <h5 class="card-title text-danger">⊗ Total de Saídas</h5>
+                <p class="card-text display-4 text-danger fw-bold">{{ data.total_saidas }}</p>
+                <small class="text-muted">Últimos {{ data.periodo }} dias</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row mb-4">
+    <!-- Gráfico 1: Entradas vs Saídas por mês -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">Entradas vs Saídas (12 meses)</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartMovimentacaoMensal"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico 2: Movimentação por Local -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">Movimentação por Local ({{ data.periodo }} dias)</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartMovimentacaoLocal"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabelas de Rankings -->
+<div class="row mb-4">
+    <!-- Top Produtos com Maior Saída -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">🔝 Produtos com Maior Saída ({{ data.periodo }} dias)</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Produto</th>
+                                <th class="text-end">Total Saído</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if data.top_produtos_saida %}
+                                {% for produto in data.top_produtos_saida %}
+                                <tr>
+                                    <td>{{ produto.produto_descricao }}</td>
+                                    <td class="text-end fw-bold">{{ produto.total_saida }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">Sem movimentações</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Fornecedores -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">🔝 Fornecedores com Maior Volume ({{ data.periodo }} dias)</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Fornecedor</th>
+                                <th class="text-end">Total Entrada</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if data.top_fornecedores %}
+                                {% for forn in data.top_fornecedores %}
+                                <tr>
+                                    <td>{{ forn.fornecedor }}</td>
+                                    <td class="text-end fw-bold">{{ forn.total_entrada }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">Sem movimentações</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Top Clientes -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">🔝 Clientes com Maior Consumo ({{ data.periodo }} dias)</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Cliente</th>
+                                <th class="text-end">Total Saída</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if data.top_clientes %}
+                                {% for cliente in data.top_clientes %}
+                                <tr>
+                                    <td>{{ cliente.cliente }}</td>
+                                    <td class="text-end fw-bold">{{ cliente.total_saida }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">Sem movimentações</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saldo de Produtos (Top 20) -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">📦 Saldo de Produtos (Top 20)</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Produto</th>
+                                <th class="text-center">Saldo</th>
+                                <th class="text-center">Locais</th>
+                                <th class="text-center">Entradas</th>
+                                <th class="text-center">Saídas</th>
+                                <th class="text-center">Relação E/S</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if data.saldo_produtos %}
+                                {% for prod in data.saldo_produtos %}
+                                <tr>
+                                    <td>{{ prod.descricao }}</td>
+                                    <td class="text-center fw-bold">{{ prod.saldo_total }}</td>
+                                    <td class="text-center"><span class="badge bg-secondary">{{ prod.locais }}</span></td>
+                                    <td class="text-center">{{ prod.entrada_qtd }}</td>
+                                    <td class="text-center">{{ prod.saida_qtd }}</td>
+                                    <td class="text-center">
+                                        {% if prod.relacao_entrada_saida is not none %}
+                                            {{ prod.relacao_entrada_saida }} : 1
+                                        {% else %}
+                                            Sem saídas
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Sem produtos</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts Chart.js -->
+<script id="movimentacaoMensalData" type="application/json">{{ data.movimentacao_mensal | tojson }}</script>
+<script id="movimentacaoLocalData" type="application/json">{{ data.movimentacao_local | tojson }}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico 1: Entradas vs Saídas Mensal
+    const movimentacaoData = JSON.parse(document.getElementById('movimentacaoMensalData').textContent || '{}');
+    const meses = Object.keys(movimentacaoData).reverse();
+    const entradas = meses.map(m => movimentacaoData[m].entrada || 0);
+    const saidas = meses.map(m => movimentacaoData[m].saida || 0);
+    
+    const ctxMensal = document.getElementById('chartMovimentacaoMensal').getContext('2d');
+    new Chart(ctxMensal, {
+        type: 'line',
+        data: {
+            labels: meses,
+            datasets: [
+                {
+                    label: 'Entradas',
+                    data: entradas,
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Saídas',
+                    data: saidas,
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Gráfico 2: Movimentação por Local
+    const movimentacaoLocal = JSON.parse(document.getElementById('movimentacaoLocalData').textContent || '[]');
+    const locais = movimentacaoLocal.map(l => l.local || 'Sem local').slice(0, 10);
+    const totaisLocal = movimentacaoLocal.map(l => l.total || 0).slice(0, 10);
+    
+    const ctxLocal = document.getElementById('chartMovimentacaoLocal').getContext('2d');
+    new Chart(ctxLocal, {
+        type: 'bar',
+        data: {
+            labels: locais,
+            datasets: [
+                {
+                    label: 'Movimentações',
+                    data: totaisLocal,
+                    backgroundColor: '#007bff',
+                    borderColor: '#0056b3',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

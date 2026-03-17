@@ -11,6 +11,7 @@
                     <th>Código</th>
                     <th>Descrição</th>
                     <th>Quantidade</th>
+                    <th>Estoque Mínimo</th>
                     <th>Ações</th>
                 </tr>
             </thead>
@@ -20,6 +21,7 @@
                         <td data-label="Código">{{ produto.id }}</td>
                         <td data-label="Descrição">{{ produto.descricao }}</td>
                         <td data-label="Estoque">{{ produto.total }}</td>
+                        <td data-label="Estoque Mínimo">{{ produto.estoque_minimo if produto.estoque_minimo is not none else '-' }}</td>
                         <td data-label="Ações">
                                                         <button class="btn-edit" onclick="editProduto('{{ produto.id }}')" aria-label="Editar produto" title="Editar produto">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
@@ -46,8 +48,9 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('produto-modal')">×</span>
             <h2>Cadastrar Produto</h2>
-            <form method="POST" class="row g-3">
+            <form id="produto-create-form" method="POST" class="row g-3">
                 <div class="col-12"><input type="text" class="form-control" name="descricao" placeholder="Descrição" required></div>
+                <div class="col-12"><input type="number" class="form-control" name="estoque_minimo" min="0" placeholder="Estoque mínimo (opcional)"></div>
                 <div class="col-12"><button type="submit" class="btn btn-primary">Cadastrar</button></div>
             </form>
         </div>
@@ -57,9 +60,10 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('edit-produto-modal')">×</span>
             <h2>Editar Produto</h2>
-            <form method="POST" class="row g-3">
+            <form id="produto-edit-form" method="POST" class="row g-3">
                 <input type="hidden" id="edit-produto-id" name="id">
                 <div class="col-12"><input type="text" class="form-control" id="edit-descricao" name="descricao" placeholder="Descrição" required></div>
+                <div class="col-12"><input type="number" class="form-control" id="edit-estoque-minimo" name="estoque_minimo" min="0" placeholder="Estoque mínimo (opcional)"></div>
                 <div class="col-12"><button type="submit" class="btn btn-primary">Atualizar</button></div>
             </form>
         </div>

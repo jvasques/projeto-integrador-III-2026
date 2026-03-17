@@ -121,6 +121,12 @@ O sistema segue diretrizes da **WCAG 2.1**, **eMAG** e legislação brasileira (
 
 ---
 
+## 📚 Documentação complementar
+
+- [`docs/ANALISE_DE_DADOS_PROPOSTAS.md`](docs/ANALISE_DE_DADOS_PROPOSTAS.md) — sugestões de implementações alternativas para atender a demanda de Análise de Dados
+
+---
+
 ## 📄 Licença
 
 Projeto acadêmico desenvolvido para fins educacionais — UNIVESP 2025.

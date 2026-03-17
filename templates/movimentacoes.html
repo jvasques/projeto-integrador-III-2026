@@ -191,14 +191,14 @@
                     <option value="saida">Saída</option>
                 </select>
             </div>
-            <div class="col-12"><label>Produto</label><select name="produto_id" class="form-control" required>
+                <div class="col-12"><label>Produto</label><select name="produto_id" id="mov-produto-id" class="form-control" required>
                     {% for p in produtos_list %}
                     <option value="{{ p.sample_id }}">{{ p.descricao }}</option>
                     {% endfor %}
                 </select></div>
             <div class="col-12"><label>Quantidade</label><input type="number" name="quantidade" class="form-control"
                     required></div>
-            <div class="col-12"><label>Local</label><select name="local" class="form-control" required>
+                <div class="col-12"><label>Local</label><select name="local" id="mov-local-select" class="form-control" required>
                     {% for l in locais %}
                     <option value="{{ l.nome }}">{{ l.nome }}</option>
                     {% endfor %}
@@ -233,6 +233,9 @@
     </div>
 </div>
 
+<script id="mov-produtos-estoque-map" type="application/json">{{ produtos_estoque_map | tojson }}</script>
+<script id="mov-locais-nomes" type="application/json">{{ locais | map(attribute='nome') | list | tojson }}</script>
+
 <script>
     function toggleParceiroField() {
         const tipo = document.getElementById('mov-tipo').value;
@@ -245,7 +248,42 @@
         const clientesHtml = document.querySelector('#clientes-data select').innerHTML;
         parceiroSelect.innerHTML = clientesHtml;
     }
-    window.addEventListener('DOMContentLoaded', toggleParceiroField);
+    function atualizarLocaisComEstoque() {
+        const produtoSel = document.getElementById('mov-produto-id');
+        const localSel = document.getElementById('mov-local-select');
+        const mapEl = document.getElementById('mov-produtos-estoque-map');
+        const locaisEl = document.getElementById('mov-locais-nomes');
+        if (!produtoSel || !localSel || !mapEl || !locaisEl) return;
+
+        const estoqueMap = JSON.parse(mapEl.textContent || '{}');
+        const locaisNomes = JSON.parse(locaisEl.textContent || '[]');
+        const produtoId = String(produtoSel.value || '');
+        const estoquePorLocal = estoqueMap[produtoId] || {};
+        const valorAtual = localSel.value;
+
+        localSel.innerHTML = '';
+        locaisNomes.forEach(function(nomeLocal) {
+            const qtd = Number(estoquePorLocal[nomeLocal] || 0);
+            const opt = document.createElement('option');
+            opt.value = nomeLocal;
+            opt.textContent = `${nomeLocal} (${qtd})`;
+            localSel.appendChild(opt);
+        });
+
+        if (valorAtual) {
+            const existe = Array.from(localSel.options).some(function(o) { return o.value === valorAtual; });
+            if (existe) localSel.value = valorAtual;
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+        toggleParceiroField();
+        atualizarLocaisComEstoque();
+        const produtoSel = document.getElementById('mov-produto-id');
+        if (produtoSel) {
+            produtoSel.addEventListener('change', atualizarLocaisComEstoque);
+        }
+    });
 
     document.addEventListener('DOMContentLoaded', function(){
     const tipoSel = document.getElementById('rev-parceiro-tipo');
