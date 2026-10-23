@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="my-4">Ficha técnica de produção</h1>
+<p>Cadastre produtos e materiais em Produtos e registre seus saldos em Movimentações. Aqui, classifique os itens e informe o consumo de insumo por unidade fabricada.</p>
+<a href="{{ url_for('planning.dashboard') }}" class="btn btn-outline-primary mb-4">Voltar ao planejamento</a>
+<h2 class="h4">Classificar item</h2>
+<form method="post" class="row g-3 mb-4">
+ <input type="hidden" name="csrf" value="{{ session.planning_csrf }}"><input type="hidden" name="action" value="item">
+ <div class="col-md-5"><label for="item" class="form-label">Cadastro</label><select id="item" name="produto_id" class="form-select" required>{% for p in available %}<option value="{{ p.id }}">{{ p.descricao }}</option>{% endfor %}</select></div>
+ <div class="col-md-3"><label for="tipo" class="form-label">Tipo</label><select id="tipo" name="tipo" class="form-select"><option value="produto">Produto acabado</option><option value="insumo">Insumo</option></select></div>
+ <div class="col-md-2"><label for="unidade" class="form-label">Unidade de estoque</label><input id="unidade" name="unidade" value="un" maxlength="20" required class="form-control"></div>
+ <div class="col-md-2 align-self-end"><button class="btn btn-primary">Salvar</button></div>
+</form>
+<p class="text-muted">O estoque atual trabalha com quantidades inteiras. Para fracionados, use uma unidade menor (por exemplo, gramas). A ficha aceita até quatro casas decimais; compras são arredondadas para cima na unidade cadastrada.</p>
+<h2 class="h4">Consumo por unidade produzida</h2>
+<details class="mb-3"><summary>Ver classificações e unidades atuais</summary><ul>{% for p in catalog %}<li>{{ p.name }} — {{ p.tipo }}, {{ p.unit }}{% if p.simulado %} (simulado){% endif %}</li>{% else %}<li>Nenhum item classificado.</li>{% endfor %}</ul></details>
+<form method="post" class="row g-3 mb-4">
+ <input type="hidden" name="csrf" value="{{ session.planning_csrf }}"><input type="hidden" name="action" value="recipe">
+ <div class="col-md-4"><label for="produto" class="form-label">Produto</label><select id="produto" name="produto_id" class="form-select" required>{% for p in catalog if p.tipo == 'produto' %}<option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>{% endfor %}</select></div>
+ <div class="col-md-4"><label for="insumo" class="form-label">Insumo</label><select id="insumo" name="insumo_id" class="form-select" required>{% for p in catalog if p.tipo == 'insumo' %}<option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>{% endfor %}</select></div>
+ <div class="col-md-2"><label for="quantidade" class="form-label">Consumo</label><input id="quantidade" name="quantidade" type="number" min="0.0001" step="0.0001" required class="form-control"></div>
+ <div class="col-md-2 align-self-end"><button class="btn btn-primary">Salvar vínculo</button></div>
+</form>
+<div class="table-responsive"><table class="table table-striped"><caption>Insumos necessários por unidade de produto</caption><thead><tr><th>Produto</th><th>Insumo</th><th>Consumo</th><th>Ação</th></tr></thead><tbody>
+{% for r in recipes %}<tr><td>{{ r.produto }}</td><td>{{ r.insumo }}</td><td>{{ r.quantidade }}</td><td><form method="post"><input type="hidden" name="csrf" value="{{ session.planning_csrf }}"><input type="hidden" name="action" value="remove"><input type="hidden" name="produto_id" value="{{ r.produto_id }}"><input type="hidden" name="insumo_id" value="{{ r.insumo_id }}"><button class="btn btn-sm btn-outline-danger" aria-label="Remover {{ r.insumo }} de {{ r.produto }}">Remover</button></form></td></tr>{% else %}<tr><td colspan="4">Nenhuma ficha cadastrada.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
