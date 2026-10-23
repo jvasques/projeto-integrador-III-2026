@@ -5,13 +5,15 @@ import secrets
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
-from flask import Blueprint, abort, g, render_template, request, session, Response, redirect, url_for, flash
+from flask import Blueprint, abort, g, render_template, request, session, Response, redirect, url_for, flash, current_app
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .demand import forecast, plan
+from .schema import SchemaInitializer
 
 bp = Blueprint('planning', __name__)
+schema_initializer = SchemaInitializer()
 
 
 @bp.before_request
@@ -22,6 +24,8 @@ def authorize():
     if request.method == 'POST' and not secrets.compare_digest(
             session['planning_csrf'], request.form.get('csrf', '')):
         abort(400, 'Formulário expirado. Recarregue a página.')
+    if not schema_initializer.ready(g.db.get_bind(), current_app.logger):
+        return render_template('planejamento_setup.html'), 503
 
 
 def items():

@@ -1,5 +1,17 @@
 # Planejamento de vendas, produção e insumos
 
+## Preparação automática em banco existente
+
+Após a publicação, o primeiro acesso autenticado ao Planejamento com IA cria
+automaticamente as duas tabelas e o índice de `sql/migration_ml.sql`, usando a
+conexão já configurada no site. Não é preciso executar o SQL manualmente se o
+usuário do banco tiver permissão de criação. O banco original deve existir.
+A rotina é aditiva, transacional e repetível; não apaga dados nem gera exemplos.
+No PostgreSQL, um bloqueio transacional coordena instâncias concorrentes, com
+limites de espera e execução. Em falha, somente o novo painel retorna erro 503;
+uma nova tentativa é permitida após um minuto. As rotas antigas não executam
+essa preparação. Um banco novo ainda exige o schema original descrito abaixo.
+
 ## Preparar e executar
 
 1. Use um banco PostgreSQL de **desenvolvimento**, separado do banco em uso.
