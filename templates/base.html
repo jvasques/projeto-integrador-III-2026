@@ -72,6 +72,7 @@
                                     <a class="nav-link {% if request.path.startswith('/dashboard/reposicoes') %}active-page{% endif %}" href="{{ url_for('dashboard_reposicoes') }}">Análise Preditiva</a>
                                 </li>
                             {% endif %}
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('planning.dashboard') }}">Planejamento com IA</a></li>
                             <li class="nav-item">
                                 <a class="nav-link text-danger" href="{{ url_for('logout') }}">Sair</a>
                             </li>
@@ -155,6 +156,7 @@
                     </div>
                     {# Mobile dados submenu (collapse) - Dashboard e Análise Preditiva #}
                     <div class="mobile-submenu collapse" id="mobileDadosCollapse" data-bs-parent=".mobile-bottom-nav .container">
+                        <a class="mobile-submenu-item" href="{{ url_for('planning.dashboard') }}">Planejamento com IA</a>
                         <a class="mobile-submenu-item {% if request.path == '/dashboard' %}active-sub{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
                         <a class="mobile-submenu-item {% if request.path.startswith('/dashboard/reposicoes') %}active-sub{% endif %}" href="{{ url_for('dashboard_reposicoes') }}">Análise Preditiva</a>
                     </div>

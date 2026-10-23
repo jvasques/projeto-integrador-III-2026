@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="my-4">Planejamento com IA</h1>
+<p>Previsão de vendas, produção sugerida e necessidade de insumos de {{ today.strftime('%d/%m/%Y') }} a {{ end.strftime('%d/%m/%Y') }}.</p>
+<div class="alert alert-{{ 'warning' if source == 'simulado' else 'info' }}">{{ 'DEMONSTRAÇÃO — dados simulados, sem validade comercial.' if source == 'simulado' else 'Apoio à decisão: previsões não garantem vendas futuras.' }} As sugestões não registram compras nem alteram o estoque.</div>
+<form method="get" class="row g-3 mb-4">
+ <div class="col-md-3"><label for="horizonte" class="form-label">Prever próximos</label><select id="horizonte" name="horizonte" class="form-select">{% for n in [7,14,30,60,90] %}<option value="{{ n }}" {{ 'selected' if horizon == n }}>{{ n }} dias</option>{% endfor %}</select></div>
+ <div class="col-md-3"><label for="historico" class="form-label">Histórico para treinamento</label><select id="historico" name="historico" class="form-select">{% for n in [90,180,365] %}<option value="{{ n }}" {{ 'selected' if window == n }}>{{ n }} dias</option>{% endfor %}</select></div>
+ <div class="col-md-3"><label for="fonte" class="form-label">Fonte dos dados</label><select id="fonte" name="fonte" class="form-select"><option value="real" {{ 'selected' if source == 'real' }}>Cadastros reais</option><option value="simulado" {{ 'selected' if source == 'simulado' }}>Demonstração simulada</option></select></div>
+ <div class="col-md-3 align-self-end"><button class="btn btn-primary">Calcular planejamento</button></div>
+</form>
+<div class="d-flex flex-wrap gap-2 mb-4"><a class="btn btn-outline-primary" href="{{ url_for('planning.technical_sheets') }}">Editar fichas técnicas</a><a class="btn btn-outline-secondary" href="{{ url_for('planning.dashboard', horizonte=horizon, historico=window, fonte=source, formato='csv') }}">Exportar planejamento CSV</a><a class="btn btn-outline-secondary" href="{{ url_for('movimentacoes') }}">Relatórios de movimentação</a></div>
+<div class="row g-3 mb-4">
+{% for label, value in [('Produtos analisados', products|length), ('Sem histórico suficiente', missing), ('Sem ficha técnica', incomplete), ('Insumos para comprar', materials|selectattr('buy', 'gt', 0)|list|length)] %}
+<div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><h2 class="h6">{{ label }}</h2><strong class="fs-2">{{ value }}</strong></div></div></div>{% endfor %}
+</div>
+{% if missing or incomplete %}<div class="alert alert-warning">Planejamento parcial: produtos sem previsão não entram nas necessidades de insumos; produtos sem ficha técnica não geram sugestões de materiais. Revise os cadastros antes de comprar.</div>{% endif %}
+<h2 class="h4">Vendas e produção</h2>
+<div class="table-responsive"><table class="table table-striped"><caption>Produzir = máximo entre zero e vendas previstas menos saldo disponível</caption><thead><tr><th>Produto</th><th>Saldo</th><th>Vendas previstas</th><th>Produzir</th><th>Erro médio diário (MAE)</th><th>Referência semanal (MAE)</th><th>Avaliação</th></tr></thead><tbody>
+{% for p in products %}<tr><td>{{ p.name }} ({{ p.unit }}){% if not p.has_recipe %}<br><span class="badge bg-warning text-dark">Sem ficha técnica</span>{% endif %}</td><td>{{ p.stock }}</td><td>{{ p.forecast.total if p.forecast.total is not none else 'Sem previsão' }}</td><td>{{ p.produce if p.produce is not none else '—' }}</td><td>{{ p.forecast.mae if p.forecast.mae is not none else '—' }}</td><td>{{ p.forecast.baseline_mae if p.forecast.baseline_mae is not none else '—' }}</td><td>{% if p.forecast.status == 'ok' %}Teste: {{ p.forecast.test_days }} dias{% if p.forecast.mae > p.forecast.baseline_mae %}<br><span class="text-danger">Modelo pior que a referência; revisar.</span>{% endif %}{% else %}Mínimo: 42 dias de histórico e 7 dias com vendas.{% endif %}</td></tr>{% else %}<tr><td colspan="7">Nenhum produto classificado nesta fonte. Cadastre a ficha técnica ou gere a demonstração.</td></tr>{% endfor %}
+</tbody></table></div>
+<h2 class="h4">Compra sugerida de insumos</h2>
+<div class="table-responsive"><table class="table table-striped"><caption>Necessidade total dos produtos com previsão e ficha, descontando o saldo de cada insumo uma vez</caption><thead><tr><th>Insumo</th><th>Unidade</th><th>Necessário</th><th>Saldo</th><th>Comprar</th></tr></thead><tbody>{% for m in materials %}<tr><td>{{ m.name }}</td><td>{{ m.unit }}</td><td>{{ '%.4f'|format(m.required) }}</td><td>{{ m.stock }}</td><td>{{ m.buy }}</td></tr>{% else %}<tr><td colspan="5">Sem necessidades calculadas. Confira o histórico e as fichas técnicas.</td></tr>{% endfor %}</tbody></table></div>
+<h2 class="h4">Histórico e projeções por produto</h2>
+{% for p in products %}
+<article class="card mb-3"><div class="card-body"><h3 class="h5">{{ p.name }}</h3><p class="small">{{ p.forecast.model }}</p>
+<div style="height:260px"><canvas id="chart-{{ p.id }}" role="img" aria-label="Histórico e projeção de {{ p.name }}. Dados disponíveis na tabela abaixo."></canvas></div>
+<details><summary>Consultar dados do gráfico</summary><div class="table-responsive" style="max-height:300px;overflow:auto"><table class="table table-sm"><thead><tr><th>Data</th><th>Vendas reais</th><th>Projeção</th></tr></thead><tbody>{% for v in p.forecast.history %}<tr><td>{{ v.date }}</td><td>{{ v.value }}</td><td>—</td></tr>{% endfor %}{% for v in p.forecast.projection %}<tr><td>{{ v.date }}</td><td>—</td><td>{{ v.value }}</td></tr>{% endfor %}</tbody></table></div></details>
+</div></article>{% endfor %}
+<p class="small text-muted">Modelo: regressão Ridge, com tendência e dia da semana. O bloco final do histórico é reservado para avaliação; depois o modelo é treinado novamente em todo o histórico selecionado. MAE menor indica menor erro, não uma garantia de acerto. Dias sem registros após a primeira venda contam como zero. Vendas são saídas para clientes (brutas, sem descontar devoluções). Entradas compõem o saldo, não a demanda. Não considera capacidade produtiva, prazo de compra, reservas, perdas ou falta de estoque que tenha impedido vendas.</p>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+const planningProducts = {{ products|tojson }};
+if (typeof Chart !== 'undefined') planningProducts.forEach(p => {
+ const h = p.forecast.history, f = p.forecast.projection;
+ new Chart(document.getElementById('chart-' + p.id), {type:'line', data:{labels:[...h,...f].map(v=>v.date), datasets:[
+  {label:'Vendas históricas',data:[...h.map(v=>v.value),...f.map(()=>null)],borderColor:'#12633f',pointRadius:0},
+  {label:'Projeção',data:[...h.map(()=>null),...f.map(v=>v.value)],borderColor:'#2855ca',borderDash:[6,4],pointRadius:0}
+ ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,title:{display:true,text:p.unit}}}}});
+});
+</script>
+{% endblock %}

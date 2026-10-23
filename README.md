@@ -1,5 +1,12 @@
 # 📦 Sistema de Gestão de Estoque
 
+## Nova fase: planejamento com Machine Learning
+
+Previsão de vendas com regressão Ridge, avaliação temporal, fichas técnicas,
+sugestões de produção e compra de insumos, gráficos e exportação CSV.
+Veja **[PLANEJAMENTO_ML.md](PLANEJAMENTO_ML.md)** para migração do banco,
+geração dos dados simulados, execução, testes e limites do modelo.
+
 Sistema web de gestão de estoque desenvolvido como **Projeto Integrador III** do curso de Computação — UNIVESP 2026.
 
 Permite o cadastro e controle de **produtos, fornecedores, clientes, locais de estoque e movimentações** (entradas, saídas e transferências), com geração de relatórios em PDF e Excel.

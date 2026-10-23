@@ -606,6 +606,12 @@ def produtos():
                 row = g.db.execute(text("SELECT descricao FROM produto WHERE id = :id"), {"id": prod_id}).mappings().first()
                 if row:
                     old_desc = row['descricao']
+                    # O histórico usa a descrição como chave de agrupamento.
+                    # Mantém as vendas vinculadas após renomear um cadastro.
+                    g.db.execute(text("""
+                        UPDATE movimentacao SET produto_descricao = :new_desc
+                        WHERE produto_descricao = :old_desc
+                    """), {"new_desc": descricao, "old_desc": old_desc})
                     # Atualiza todos os produtos com a mesma descrição
                     if possui_colunas_planejamento:
                         g.db.execute(text("""
@@ -2340,6 +2346,11 @@ def api_predicao_produto(produto_id):
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+from analytics.routes import bp as planning_blueprint
+from analytics.demo import register_demo_command
+app.register_blueprint(planning_blueprint)
+register_demo_command(app, engine)
 
 if __name__ == '__main__':
     app.run(debug=True)
